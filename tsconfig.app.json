@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "exclude": [
+    "src/components/BottomFeatureDivs.tsx",
+    "src/components/CenterQuestSection.tsx",
+    "src/components/ClaimModal.tsx",
+    "src/components/CollapsibleHero.tsx",
+    "src/components/LeftControlDock.tsx",
+    "src/components/OrganizerModal.tsx",
+    "src/components/QuestRunnerSection.tsx",
+    "src/components/RealVaultTerminal.tsx",
+    "src/components/RightBountySection.tsx"
+  ]
+}
