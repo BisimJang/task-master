@@ -27,7 +27,7 @@ interface AudienceTerminalSectionProps {
   deviceId: string | null
   isInsideNimiqPay: boolean
   nimiqProvider: NimiqProviderInstance | null
-  onOpenCreatorMenu: () => void
+  onOpenCreatorMenu?: () => void
   onClaimSuccess: (txHash: string, amount: number) => void
 }
 
@@ -262,15 +262,17 @@ export const AudienceTerminalSection: React.FC<AudienceTerminalSectionProps> = (
           </button>
         )}
 
-        <div className="flex items-center justify-between text-[11px] text-white/60 pt-1">
-          <span>Host Controls:</span>
-          <button
-            onClick={onOpenCreatorMenu}
-            className="text-[#FF532F] hover:underline font-bold cursor-pointer"
-          >
-            Creator Hub (+)
-          </button>
-        </div>
+        {onOpenCreatorMenu && (
+          <div className="flex items-center justify-between text-[11px] text-white/60 pt-1">
+            <span>Host Controls:</span>
+            <button
+              onClick={onOpenCreatorMenu}
+              className="text-[#FF532F] hover:underline font-bold cursor-pointer"
+            >
+              Creator Hub (+)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

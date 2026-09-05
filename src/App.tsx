@@ -140,10 +140,21 @@ function App() {
 
   // Creator Modal Handlers
   const handleCreateEvent = (newEvent: StageEvent) => {
-    saveEvent(newEvent)
-    setEvents([newEvent, ...events])
-    setCurrentEvent(newEvent)
-    window.history.replaceState({}, '', `?event=${newEvent.slug}`)
+    // Inject creator address when creating
+    const eventWithCreator = {
+      ...newEvent,
+      creatorAddress: nimiqAddress || 'unlinked'
+    }
+    saveEvent(eventWithCreator)
+    setEvents([eventWithCreator, ...events])
+    setCurrentEvent(eventWithCreator)
+    window.history.replaceState({}, '', `?event=${eventWithCreator.slug}`)
+  }
+
+  const handleUpdateEvent = (updatedEvent: StageEvent) => {
+    saveEvent(updatedEvent)
+    setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+    setCurrentEvent(updatedEvent)
   }
 
   const handleSelectEvent = (event: StageEvent) => {
@@ -152,8 +163,16 @@ function App() {
   }
 
   const handleFundPool = (amount: number) => {
+    if (!currentEvent) return
     console.log('Funding pool via Nimiq Pay:', amount)
     alert(`Triggering Nimiq Pay transaction for ${amount} NIM to fund the pool...`)
+    
+    // Simulate updating pool
+    const updatedEvent = {
+      ...currentEvent,
+      totalPoolNIM: currentEvent.totalPoolNIM + amount
+    }
+    handleUpdateEvent(updatedEvent)
   }
 
   const handleClearAllData = () => {
@@ -178,6 +197,11 @@ function App() {
     })
   }
 
+  // Determine if current user is the creator
+  // If there's no current event, anyone can create one.
+  const isCreator = !currentEvent || 
+    (currentEvent.creatorAddress && nimiqAddress && currentEvent.creatorAddress.toLowerCase() === nimiqAddress.toLowerCase())
+
   return (
     <div className="min-h-screen bg-[#F4F4F6] text-[#121417] selection:bg-[#FF532F] selection:text-white pb-24 md:pb-0 font-sans">
       
@@ -198,15 +222,17 @@ function App() {
             <Sparkles className="w-3.5 h-3.5 text-[#FBD023]" />
             <span className="font-black text-xs">{totalEarned} NIM</span>
           </div>
-          <button 
-            onClick={() => setIsCreatorModalOpen(true)}
-            className="w-8 h-8 rounded-full bg-white border-2 border-[#121417] flex items-center justify-center hover:bg-neutral-100 shadow-retro-sm transition-all"
-          >
-            <div className="w-1 h-1 rounded-full bg-[#121417] space-x-1 flex gap-0.5">
-              <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
-              <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
-            </div>
-          </button>
+          {isCreator && (
+            <button 
+              onClick={() => setIsCreatorModalOpen(true)}
+              className="w-8 h-8 rounded-full bg-white border-2 border-[#121417] flex items-center justify-center hover:bg-neutral-100 shadow-retro-sm transition-all"
+            >
+              <div className="w-1 h-1 rounded-full bg-[#121417] space-x-1 flex gap-0.5">
+                <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
+                <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
+              </div>
+            </button>
+          )}
         </div>
       </header>
 
@@ -246,7 +272,7 @@ function App() {
               event={currentEvent} 
               onTaskComplete={handleTaskComplete}
               earnedPerTask={earnedPerTask}
-              onOpenCreatorMenu={() => setIsCreatorModalOpen(true)}
+              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
             />
           ) : (
             <AudienceTerminalSection 
@@ -256,7 +282,7 @@ function App() {
               deviceId={deviceId}
               isInsideNimiqPay={isInsideNimiqPay}
               nimiqProvider={nimiqProvider}
-              onOpenCreatorMenu={() => setIsCreatorModalOpen(true)}
+              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
               onClaimSuccess={handleClaimSuccess}
             />
           )}
@@ -269,7 +295,7 @@ function App() {
               event={currentEvent}
               onTaskComplete={handleTaskComplete}
               earnedPerTask={earnedPerTask}
-              onOpenCreatorMenu={() => setIsCreatorModalOpen(true)}
+              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
             />
           </div>
           <div className="sticky top-24">
@@ -280,7 +306,7 @@ function App() {
               deviceId={deviceId}
               isInsideNimiqPay={isInsideNimiqPay}
               nimiqProvider={nimiqProvider}
-              onOpenCreatorMenu={() => setIsCreatorModalOpen(true)}
+              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
               onClaimSuccess={handleClaimSuccess}
             />
           </div>
@@ -288,16 +314,19 @@ function App() {
 
       </main>
 
-      <CreatorUtilityModal 
-        isOpen={isCreatorModalOpen}
-        onClose={() => setIsCreatorModalOpen(false)}
-        events={events}
-        activeEvent={currentEvent}
-        onSelectEvent={handleSelectEvent}
-        onCreateEvent={handleCreateEvent}
-        onFundPool={handleFundPool}
-        onClearAllData={handleClearAllData}
-      />
+      {isCreatorModalOpen && (
+        <CreatorUtilityModal 
+          isOpen={isCreatorModalOpen}
+          onClose={() => setIsCreatorModalOpen(false)}
+          events={events}
+          activeEvent={currentEvent}
+          onSelectEvent={handleSelectEvent}
+          onCreateEvent={handleCreateEvent}
+          onUpdateEvent={handleUpdateEvent}
+          onFundPool={handleFundPool}
+          onClearAllData={handleClearAllData}
+        />
+      )}
     </div>
   )
 }
