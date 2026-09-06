@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import {
-  Radio, Users, AlertCircle, CheckCircle2, Plus,
+  Radio, Users, AlertCircle, CheckCircle2, Plus, Lock,
   Share2, FileText, Globe, Gamepad2, Wrench, ExternalLink, HelpCircle, Flame
 } from 'lucide-react'
 import type { StageEvent, SessionTask } from '../lib/types'
@@ -46,9 +46,22 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn }) =>
   const isTaken = !isEarned && (task.winnerCount >= task.maxWinners)
   const slotsLeft = Math.max(0, task.maxWinners - (task.winnerCount || 0))
 
+  if (task.isLocked && !isEarned) {
+    return (
+      <div className="p-6 bg-[#F4F4F6] rounded-3xl border-2 border-dashed border-neutral-300 flex flex-col items-center justify-center gap-2 text-center animate-in fade-in zoom-in-95">
+        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-1">
+          <Lock className="w-5 h-5 text-neutral-400" />
+        </div>
+        <p className="font-black text-sm text-[#121417]/60 uppercase tracking-widest">Locked by Host</p>
+        <p className="text-[10px] font-bold text-[#121417]/40 max-w-[200px]">Wait for the stage presentation. This quiz will unlock live.</p>
+      </div>
+    )
+  }
+
   const markDone = () => { if (!isEarned && !isTaken) onEarn(task.id, 0) }
 
   const openLink = () => {
+    // @ts-ignore
     if (task.actionUrl) window.open(task.actionUrl, '_blank', 'noopener')
   }
 

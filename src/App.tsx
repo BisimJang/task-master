@@ -26,11 +26,31 @@ function App() {
   // Modals
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false)
 
+  // State to track async lookups for claims
+  const [earnedPerTask, setEarnedPerTask] = useState<Record<string, boolean>>({})
+
   // INITIAL LOAD
   useEffect(() => {
-    const loadedEvents = getEvents()
-    setEvents(loadedEvents)
-    setClaims(getClaims())
+    const loadData = async () => {
+      const loadedEvents = await getEvents()
+      setEvents(loadedEvents)
+      const loadedClaims = await getClaims()
+      setClaims(loadedClaims)
+
+      // URL Parsing for specific event
+      const searchParams = new URLSearchParams(window.location.search)
+      const eventSlug = searchParams.get('event')
+      let active = null
+      if (loadedEvents.length > 0) {
+        if (eventSlug) {
+          active = loadedEvents.find(e => e.slug === eventSlug) || loadedEvents[0]
+        } else {
+          active = loadedEvents[0]
+        }
+        setCurrentEvent(active)
+      }
+    }
+    loadData()
 
     // Setup Nimiq & Wallet
     const initNimiq = async () => {
@@ -72,18 +92,6 @@ function App() {
       }
     }
     initNimiq()
-
-    // URL Parsing for specific event
-    const searchParams = new URLSearchParams(window.location.search)
-    const eventSlug = searchParams.get('event')
-    if (loadedEvents.length > 0) {
-      if (eventSlug) {
-        const found = loadedEvents.find(e => e.slug === eventSlug)
-        setCurrentEvent(found || loadedEvents[0])
-      } else {
-        setCurrentEvent(loadedEvents[0])
-      }
-    }
   }, [])
 
   // Calc Total Earned
@@ -97,9 +105,22 @@ function App() {
     setTotalEarned(earned)
   }, [claims, nimiqAddress, deviceId])
 
+  // Check claims asynchronously when currentEvent or wallet changes
+  useEffect(() => {
+    if (!currentEvent || (!nimiqAddress && !deviceId)) return
+    const checkClaims = async () => {
+      const map: Record<string, boolean> = {}
+      for (const t of currentEvent.tasks) {
+        map[t.id] = await hasClaimedTask(currentEvent.id, t.id, nimiqAddress || '', deviceId)
+      }
+      setEarnedPerTask(map)
+    }
+    checkClaims()
+  }, [currentEvent, nimiqAddress, deviceId, claims])
+
   // --- Handlers ---
 
-  const handleTaskComplete = (taskId: string, _optIdx: number) => {
+  const handleTaskComplete = async (taskId: string, _optIdx: number) => {
     if (!currentEvent) return
 
     const task = currentEvent.tasks.find((x) => x.id === taskId)
@@ -110,13 +131,14 @@ function App() {
       return
     }
 
-    if (hasClaimedTask(currentEvent.id, taskId, nimiqAddress || '', deviceId)) {
+    const alreadyClaimed = await hasClaimedTask(currentEvent.id, taskId, nimiqAddress || '', deviceId)
+    if (alreadyClaimed) {
       console.log('Already claimed by this user.')
       return
     }
 
     // 1. Increment winnerCount in DB
-    const updatedEvent = updateTaskWinnerCount(currentEvent.id, taskId)
+    const updatedEvent = await updateTaskWinnerCount(currentEvent.id, taskId)
     if (updatedEvent) {
       setCurrentEvent(updatedEvent)
       setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e))
@@ -134,25 +156,25 @@ function App() {
       claimedAt: new Date().toISOString()
     }
     
-    saveClaim(claimRecord)
+    await saveClaim(claimRecord)
     setClaims([...claims, claimRecord])
   }
 
   // Creator Modal Handlers
-  const handleCreateEvent = (newEvent: StageEvent) => {
+  const handleCreateEvent = async (newEvent: StageEvent) => {
     // Inject creator address when creating
     const eventWithCreator = {
       ...newEvent,
       creatorAddress: nimiqAddress || 'unlinked'
     }
-    saveEvent(eventWithCreator)
+    await saveEvent(eventWithCreator)
     setEvents([eventWithCreator, ...events])
     setCurrentEvent(eventWithCreator)
     window.history.replaceState({}, '', `?event=${eventWithCreator.slug}`)
   }
 
-  const handleUpdateEvent = (updatedEvent: StageEvent) => {
-    saveEvent(updatedEvent)
+  const handleUpdateEvent = async (updatedEvent: StageEvent) => {
+    await saveEvent(updatedEvent)
     setEvents(events.map(e => e.id === updatedEvent.id ? updatedEvent : e))
     setCurrentEvent(updatedEvent)
   }
@@ -189,16 +211,7 @@ function App() {
      console.log('Claim Success!', txHash, amount)
   }
 
-  // Derive claim maps
-  const earnedPerTask: Record<string, boolean> = {}
-  if (currentEvent) {
-    currentEvent.tasks.forEach(t => {
-      earnedPerTask[t.id] = hasClaimedTask(currentEvent.id, t.id, nimiqAddress || '', deviceId)
-    })
-  }
-
   // Determine if current user is the creator
-  // If there's no current event, anyone can create one.
   const isCreator = !currentEvent || 
     (currentEvent.creatorAddress && nimiqAddress && currentEvent.creatorAddress.toLowerCase() === nimiqAddress.toLowerCase())
 

@@ -1,11 +1,4 @@
-export type TaskType =
-  | 'quiz'
-  | 'social_follow'
-  | 'social_tag'
-  | 'social_post'
-  | 'visit_url'
-  | 'play_game'
-  | 'custom'
+export type TaskType = 'quiz'
 
 export interface SessionTask {
   id: string
@@ -15,6 +8,7 @@ export interface SessionTask {
   rewardNIM: number     // FINAL — locked on publish
   maxWinners: number    // 1 = first wins, N = first N win
   winnerCount: number   // tracks claims on this device
+  isLocked?: boolean
   // Quiz
   options?: string[]
   correctIndex?: number

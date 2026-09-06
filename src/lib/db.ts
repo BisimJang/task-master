@@ -1,89 +1,93 @@
 import type { StageEvent, AttendeeClaimRecord } from './types'
+import { supabase } from './supabase'
 
-const STORAGE_EVENTS_KEY = 'stagedrop_events_v6'
-const STORAGE_CLAIMS_KEY = 'stagedrop_claims_v6'
-const STORAGE_VERSION_KEY = 'stagedrop_db_version'
-const CURRENT_DB_VERSION = '6'
-
-/** One-time migration: wipe all old stagedrop_* data on version bump */
-function runMigration(): void {
-  if (localStorage.getItem(STORAGE_VERSION_KEY) === CURRENT_DB_VERSION) return
-  const keys = Object.keys(localStorage)
-  for (const k of keys) {
-    if (k.startsWith('stagedrop_')) localStorage.removeItem(k)
+export async function getEvents(): Promise<StageEvent[]> {
+  const { data, error } = await supabase.from('events').select('*').order('id', { ascending: false })
+  if (error) {
+    console.error('Error fetching events:', error)
+    return []
   }
-  localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_DB_VERSION)
+  return (data || []) as StageEvent[]
 }
 
-runMigration()
+export async function saveEvent(event: StageEvent): Promise<void> {
+  const { error } = await supabase.from('events').upsert(event)
+  if (error) console.error('Error saving event:', error)
+}
 
-export function getEvents(): StageEvent[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_EVENTS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch (e) {
-    console.error('Failed to parse stored events:', e)
+export async function getClaims(): Promise<AttendeeClaimRecord[]> {
+  const { data, error } = await supabase.from('claims').select('*')
+  if (error) {
+    console.error('Error fetching claims:', error)
+    return []
   }
-  return []
+  return (data || []) as AttendeeClaimRecord[]
 }
 
-export function saveEvent(event: StageEvent): void {
-  const events = getEvents()
-  const idx = events.findIndex(e => e.id === event.id)
-  if (idx >= 0) {
-    events[idx] = event
-  } else {
-    events.unshift(event)
+export async function saveClaim(claim: AttendeeClaimRecord): Promise<void> {
+  const { error } = await supabase.from('claims').insert(claim)
+  if (error) console.error('Error saving claim:', error)
+}
+
+export async function hasClaimedTask(eventId: string, taskId: string, walletAddress: string, deviceId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('claims')
+    .select('id')
+    .eq('eventId', eventId)
+    .eq('taskId', taskId)
+    .or(`walletAddress.eq.${walletAddress},deviceIdentifier.eq.${deviceId}`)
+    .limit(1)
+  
+  if (error) {
+    console.error('Error checking claim:', error)
+    return false
   }
-  localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events))
+  return data && data.length > 0
 }
 
-export function deleteEvent(eventId: string): void {
-  const events = getEvents().filter(e => e.id !== eventId)
-  localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events))
-}
+export async function updateTaskWinnerCount(eventId: string, taskId: string): Promise<StageEvent | null> {
+  // Fetch current event
+  const { data: event, error: fetchErr } = await supabase.from('events').select('*').eq('id', eventId).single()
+  if (fetchErr || !event) return null
 
-/** Competition: increment winnerCount on a task, returns updated event */
-export function updateTaskWinnerCount(eventId: string, taskId: string): StageEvent | null {
-  const events = getEvents()
-  const eventIdx = events.findIndex(e => e.id === eventId)
-  if (eventIdx < 0) return null
-  const event = events[eventIdx]
-  const taskIdx = event.tasks.findIndex(t => t.id === taskId)
-  if (taskIdx < 0) return null
-  event.tasks[taskIdx].winnerCount = (event.tasks[taskIdx].winnerCount || 0) + 1
-  events[eventIdx] = event
-  localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events))
-  return event
-}
+  // Modify tasks array
+  const typedEvent = event as StageEvent
+  let taskUpdated = false
+  const newTasks = typedEvent.tasks.map(t => {
+    if (t.id === taskId) {
+      taskUpdated = true
+      return { ...t, winnerCount: (t.winnerCount || 0) + 1 }
+    }
+    return t
+  })
 
-export function getClaims(): AttendeeClaimRecord[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_CLAIMS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch (e) {
-    console.error('Failed to parse claims:', e)
-  }
-  return []
-}
+  if (!taskUpdated) return null
+  typedEvent.tasks = newTasks
 
-export function saveClaim(claim: AttendeeClaimRecord): void {
-  const claims = getClaims()
-  claims.push(claim)
-  localStorage.setItem(STORAGE_CLAIMS_KEY, JSON.stringify(claims))
-}
-
-export function hasClaimedTask(eventId: string, taskId: string, wallet: string, deviceId: string): boolean {
-  return getClaims().some(c =>
-    c.eventId === eventId &&
-    c.taskId === taskId &&
-    (c.walletAddress.toLowerCase() === wallet.toLowerCase() || (deviceId && c.deviceIdentifier === deviceId))
-  )
+  // Save back to DB
+  await saveEvent(typedEvent)
+  return typedEvent
 }
 
 export function clearAllStorage(): void {
-  const keys = Object.keys(localStorage)
-  for (const k of keys) {
-    if (k.startsWith('stagedrop_')) localStorage.removeItem(k)
-  }
+  console.log("Local storage fallback cleared. For DB, reset data manually via Supabase dashboard.")
+  localStorage.clear()
+}
+
+export async function toggleTaskLock(eventId: string, taskId: string, isLocked: boolean): Promise<StageEvent | null> {
+  const { data: event, error: fetchErr } = await supabase.from('events').select('*').eq('id', eventId).single()
+  if (fetchErr || !event) return null
+  const typedEvent = event as StageEvent
+  let taskUpdated = false
+  const newTasks = typedEvent.tasks.map(t => {
+    if (t.id === taskId) {
+      taskUpdated = true
+      return { ...t, isLocked }
+    }
+    return t
+  })
+  if (!taskUpdated) return null
+  typedEvent.tasks = newTasks
+  await saveEvent(typedEvent)
+  return typedEvent
 }
