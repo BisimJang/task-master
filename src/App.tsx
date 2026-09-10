@@ -363,35 +363,70 @@ function App() {
         <CollapsiblePlatformHero />
         <button data-open-creator className="hidden" onClick={() => setIsCreatorModalOpen(true)} />
 
-        {currentEvent ? (
-          <>
-            {/* MOBILE VIEW */}
-            <div className="md:hidden">
-              {activeTab === 'stage' ? (
-                <LiveSessionsSection 
-                  event={currentEvent} 
-                  onTaskComplete={handleTaskComplete}
-                  earnedPerTask={earnedPerTask}
-                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-                />
-              ) : activeTab === 'terminal' ? (
-                <AudienceTerminalSection 
-                  event={currentEvent}
-                  totalEarnedNIM={totalEarned}
-                  nimiqAddress={nimiqAddress}
-                  deviceId={deviceId}
-                  isInsideNimiqPay={isInsideNimiqPay}
-                  nimiqProvider={nimiqProvider}
-                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-                  onClaimSuccess={handleClaimSuccess}
-                />
-              ) : (
-                <SettingsPanel nimiqAddress={nimiqAddress} isInsideNimiqPay={isInsideNimiqPay} totalEarned={totalEarned} events={events} />
-              )}
-            </div>
+        {/* MOBILE VIEW (always switches based on activeTab) */}
+        <div className="md:hidden">
+          {activeTab === 'stage' ? (
+            currentEvent ? (
+              <LiveSessionsSection 
+                event={currentEvent} 
+                onTaskComplete={handleTaskComplete}
+                earnedPerTask={earnedPerTask}
+                onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95">
+                <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
+                  <QrCode className="w-10 h-10 text-[#121417]" />
+                </div>
+                <h2 className="font-display font-black text-3xl tracking-tight text-[#121417] mb-3">
+                  Join a Live Event
+                </h2>
+                <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm">
+                  Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
+                </p>
+                
+                <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
+                  <button 
+                    onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
+                    className="w-full py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+                  >
+                    <Scan className="w-5 h-5" /> Scan QR Code
+                  </button>
+                  
+                  <button 
+                    onClick={() => setIsCreatorModalOpen(true)}
+                    className="w-full py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+                  >
+                    <Mic2 className="w-5 h-5" /> Host an Event
+                  </button>
+                </div>
+              </div>
+            )
+          ) : activeTab === 'terminal' ? (
+            <AudienceTerminalSection 
+              event={currentEvent}
+              totalEarnedNIM={totalEarned}
+              nimiqAddress={nimiqAddress}
+              deviceId={deviceId}
+              isInsideNimiqPay={isInsideNimiqPay}
+              nimiqProvider={nimiqProvider}
+              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+              onClaimSuccess={handleClaimSuccess}
+            />
+          ) : (
+            <SettingsPanel 
+              nimiqAddress={nimiqAddress} 
+              isInsideNimiqPay={isInsideNimiqPay} 
+              totalEarned={totalEarned} 
+              events={events} 
+            />
+          )}
+        </div>
 
-            {/* DESKTOP GRID */}
-            <div className="hidden md:grid grid-cols-[1.5fr_1fr] gap-6 items-start">
+        {/* DESKTOP GRID */}
+        <div className="hidden md:block">
+          {currentEvent ? (
+            <div className="grid grid-cols-[1.5fr_1fr] gap-6 items-start">
               <div className="sticky top-24">
                 <LiveSessionsSection 
                   event={currentEvent}
@@ -413,36 +448,36 @@ function App() {
                 />
               </div>
             </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 mt-6 text-center animate-in fade-in zoom-in-95">
-            <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
-              <QrCode className="w-10 h-10 text-[#121417]" />
-            </div>
-            <h2 className="font-display font-black text-3xl sm:text-4xl tracking-tight text-[#121417] mb-3">
-              Join a Live Event
-            </h2>
-            <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm sm:text-base">
-              Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto">
-              <button 
-                onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
-                className="flex-1 py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-              >
-                <Scan className="w-5 h-5" /> Scan QR Code
-              </button>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 mt-6 text-center animate-in fade-in zoom-in-95">
+              <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
+                <QrCode className="w-10 h-10 text-[#121417]" />
+              </div>
+              <h2 className="font-display font-black text-3xl sm:text-4xl tracking-tight text-[#121417] mb-3">
+                Join a Live Event
+              </h2>
+              <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm sm:text-base">
+                Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
+              </p>
               
-              <button 
-                onClick={() => setIsCreatorModalOpen(true)}
-                className="flex-1 py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-              >
-                <Mic2 className="w-5 h-5" /> Host an Event
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto">
+                <button 
+                  onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
+                  className="flex-1 py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+                >
+                  <Scan className="w-5 h-5" /> Scan QR Code
+                </button>
+                
+                <button 
+                  onClick={() => setIsCreatorModalOpen(true)}
+                  className="flex-1 py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+                >
+                  <Mic2 className="w-5 h-5" /> Host an Event
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
       </main>
 

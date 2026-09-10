@@ -37,9 +37,10 @@ interface TaskCardProps {
   index: number
   isEarned: boolean
   onEarn: (taskId: string, optIdx: number) => void
+  onOpenCreatorMenu?: () => void
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOpenCreatorMenu }) => {
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
   
@@ -54,6 +55,14 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn }) =>
         </div>
         <p className="font-black text-sm text-[#121417]/60 uppercase tracking-widest">Locked by Host</p>
         <p className="text-[10px] font-bold text-[#121417]/40 max-w-[200px]">Wait for the stage presentation. This quiz will unlock live.</p>
+        {onOpenCreatorMenu && (
+          <button 
+            onClick={onOpenCreatorMenu}
+            className="mt-2 px-4 py-2 bg-[#121417] text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-retro-sm"
+          >
+            Unlock in Creator Hub
+          </button>
+        )}
       </div>
     )
   }
@@ -234,6 +243,7 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
                     index={idx}
                     isEarned={Boolean(earnedPerTask[task.id])}
                     onEarn={onTaskComplete}
+                    onOpenCreatorMenu={onOpenCreatorMenu}
                   />
                 </div>
               ))}
