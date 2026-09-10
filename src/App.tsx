@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap } from 'lucide-react'
+import { Sparkles, Zap, QrCode, Scan, Mic2 } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
@@ -272,7 +272,7 @@ function App() {
       {/* MAIN CONTENT */}
       <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
         
-        <CollapsiblePlatformHero />
+        <CollapsiblePlatformHero onHostClick={() => setIsCreatorModalOpen(true)} />
 
         {currentEvent ? (
           <>
@@ -324,20 +324,32 @@ function App() {
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95">
-            <div className="w-24 h-24 bg-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-lg transform rotate-3">
-              <Zap className="w-12 h-12 text-[#FBD023]" />
+          <div className="flex flex-col items-center justify-center py-20 mt-6 text-center animate-in fade-in zoom-in-95">
+            <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
+              <QrCode className="w-10 h-10 text-[#121417]" />
             </div>
-            <h2 className="font-display font-black text-4xl tracking-tight text-[#121417] mb-4">Welcome to EventQuest</h2>
-            <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8">
-              Scan a live event QR code or click an event link to join the stage and earn NIM rewards!
+            <h2 className="font-display font-black text-3xl sm:text-4xl tracking-tight text-[#121417] mb-3">
+              Join a Live Event
+            </h2>
+            <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm sm:text-base">
+              Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
             </p>
-            <button 
-              onClick={() => setIsCreatorModalOpen(true)}
-              className="px-6 py-3 bg-white border-2 border-[#121417] rounded-xl font-black text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all"
-            >
-              Or Host an Event
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto">
+              <button 
+                onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
+                className="flex-1 py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+              >
+                <Scan className="w-5 h-5" /> Scan QR Code
+              </button>
+              
+              <button 
+                onClick={() => setIsCreatorModalOpen(true)}
+                className="flex-1 py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
+              >
+                <Mic2 className="w-5 h-5" /> Host an Event
+              </button>
+            </div>
           </div>
         )}
 

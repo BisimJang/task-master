@@ -13,7 +13,11 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
-export const CollapsiblePlatformHero: React.FC = () => {
+interface HeroProps {
+  onHostClick?: () => void;
+}
+
+export const CollapsiblePlatformHero: React.FC<HeroProps> = ({ onHostClick }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
@@ -71,24 +75,26 @@ export const CollapsiblePlatformHero: React.FC = () => {
 
           {/* Main Headline & Description */}
           <div className="pt-6 pb-6 max-w-4xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-black/10 text-[11px] font-black uppercase tracking-wider text-[#FF532F] mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Real-Time Stage Interactivity</span>
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-black/10 text-[11px] font-black uppercase tracking-wider text-[#FF532F] mb-3">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Real-Time Stage Interactivity</span>
+              </div>
+
+              <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#121417] tracking-tight leading-[1.1]">
+                Turn Conference Panels into{' '}
+                <span className="text-[#FF532F] underline decoration-4 decoration-[#121417]">
+                  Live Reward Sessions
+                </span>
+              </h1>
+
+              <p className="text-sm sm:text-base text-[#121417]/85 font-medium leading-relaxed mt-3 max-w-3xl">
+                EventQuest transforms passive conference audiences into active participants. Event creators
+                configure panel sessions, attach trivia questions with custom NIM bounties per question,
+                and drop them live to audience phones the moment speakers wrap up. Payouts confirm
+                on-chain in 1 second directly inside Nimiq Pay with zero gas fees.
+              </p>
             </div>
-
-            <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#121417] tracking-tight leading-[1.1]">
-              Turn Conference Panels into{' '}
-              <span className="text-[#FF532F] underline decoration-4 decoration-[#121417]">
-                Live Reward Sessions
-              </span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-[#121417]/85 font-medium leading-relaxed mt-3 max-w-3xl">
-              StageDrop transforms passive conference audiences into active participants. Event creators
-              configure panel sessions, attach trivia questions with custom NIM bounties per question,
-              and drop them live to audience phones the moment speakers wrap up. Payouts confirm
-              on-chain in 1 second directly inside Nimiq Pay with zero gas fees.
-            </p>
           </div>
 
           {/* 3-Step Interactive Lifecycle Flow (Doubles the content & depth) */}
