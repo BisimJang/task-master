@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap, QrCode, Scan, Mic2 } from 'lucide-react'
+import { Sparkles, Zap, QrCode, Scan, Mic2, Settings } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
@@ -8,8 +8,64 @@ import type { StageEvent, AttendeeClaimRecord } from './lib/types'
 import { getEvents, saveEvent, getClaims, saveClaim, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
 import { initNimiqProvider, type NimiqProviderInstance } from './lib/nimiq'
 
+function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, events }: {
+  nimiqAddress: string | null
+  isInsideNimiqPay: boolean
+  totalEarned: number
+  events: StageEvent[]
+}) {
+  return (
+    <div className="space-y-4 pt-4 pb-28">
+      {/* Wallet Card */}
+      <div className="bg-[#121417] rounded-3xl p-5 text-white">
+        <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Your Wallet</p>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-bold text-white/60">
+            {isInsideNimiqPay ? 'Connected via Nimiq Pay' : 'Browser Test Wallet'}
+          </span>
+        </div>
+        <p className="font-mono text-xs break-all text-[#FBD023]">{nimiqAddress || 'Not connected'}</p>
+        <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+          <span className="text-xs font-black text-white/60">Total Earned</span>
+          <span className="font-black text-xl text-[#FBD023]">{totalEarned} NIM</span>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50 mb-1">Events Joined</p>
+          <p className="font-black text-2xl text-[#121417]">{events.length}</p>
+        </div>
+        <div className="bg-[#FBD023] border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50 mb-1">NIM Earned</p>
+          <p className="font-black text-2xl text-[#121417]">{totalEarned}</p>
+        </div>
+      </div>
+
+      {/* App Info */}
+      <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-3">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50">About</p>
+        <div className="flex justify-between text-xs font-bold">
+          <span className="text-[#121417]/60">App</span>
+          <span>EventQuest</span>
+        </div>
+        <div className="flex justify-between text-xs font-bold">
+          <span className="text-[#121417]/60">Network</span>
+          <span>Nimiq Mainnet</span>
+        </div>
+        <div className="flex justify-between text-xs font-bold">
+          <span className="text-[#121417]/60">Platform</span>
+          <span>{isInsideNimiqPay ? 'Nimiq Pay Mini App' : 'Browser'}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState<'stage' | 'terminal'>('stage')
+  const [activeTab, setActiveTab] = useState<'stage' | 'terminal' | 'settings'>('stage')
   const [events, setEvents] = useState<StageEvent[]>([])
   const [currentEvent, setCurrentEvent] = useState<StageEvent | null>(null)
   
@@ -239,6 +295,7 @@ function App() {
           </div>
           {isCreator && (
             <button 
+              data-open-creator
               onClick={() => setIsCreatorModalOpen(true)}
               className="w-8 h-8 rounded-full bg-white border-2 border-[#121417] flex items-center justify-center hover:bg-neutral-100 shadow-retro-sm transition-all"
             >
@@ -251,34 +308,60 @@ function App() {
         </div>
       </header>
 
-      {/* MOBILE TABS */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-[#121417] px-4 py-3 flex gap-2 shadow-[0_-4px_0_0_rgba(0,0,0,0.05)]">
-        <button
-          onClick={() => setActiveTab('stage')}
-          className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-            activeTab === 'stage'
-              ? 'bg-[#121417] text-white shadow-retro-sm'
-              : 'bg-[#F4F4F6] text-[#121417]/60 hover:bg-neutral-200'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" /> Live Stage
-        </button>
-        <button
-          onClick={() => setActiveTab('terminal')}
-          className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-            activeTab === 'terminal'
-              ? 'bg-[#121417] text-[#00FF41] shadow-retro-sm'
-              : 'bg-[#F4F4F6] text-[#121417]/60 hover:bg-neutral-200'
-          }`}
-        >
-          <Zap className="w-4 h-4" /> Claim NIM
-        </button>
+      {/* MOBILE BOTTOM NAV */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-[#121417] shadow-[0_-4px_0_0_rgba(0,0,0,0.05)]">
+        <div className="flex">
+          {/* Home */}
+          <button
+            onClick={() => setActiveTab('stage')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all ${
+              activeTab === 'stage' ? 'text-[#121417]' : 'text-[#121417]/40'
+            }`}
+          >
+            <Sparkles className={`w-5 h-5 ${activeTab === 'stage' ? 'text-[#FF532F]' : ''}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
+          </button>
+
+          {/* Create */}
+          <button
+            onClick={() => setIsCreatorModalOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all text-[#121417]/40 relative"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-[#121417] flex items-center justify-center shadow-retro-sm -mt-6 border-2 border-white">
+              <Mic2 className="w-5 h-5 text-[#FBD023]" />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Create</span>
+          </button>
+
+          {/* Rewards */}
+          <button
+            onClick={() => setActiveTab('terminal')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all ${
+              activeTab === 'terminal' ? 'text-[#121417]' : 'text-[#121417]/40'
+            }`}
+          >
+            <Zap className={`w-5 h-5 ${activeTab === 'terminal' ? 'text-[#FBD023]' : ''}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Rewards</span>
+          </button>
+
+          {/* Settings (shows wallet address pill) */}
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all ${
+              activeTab === 'settings' ? 'text-[#121417]' : 'text-[#121417]/40'
+            }`}
+          >
+            <Settings className={`w-5 h-5 ${activeTab === 'settings' ? 'text-[#121417]' : ''}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Settings</span>
+          </button>
+        </div>
       </div>
 
       {/* MAIN CONTENT */}
       <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
         
         <CollapsiblePlatformHero />
+        <button data-open-creator className="hidden" onClick={() => setIsCreatorModalOpen(true)} />
 
         {currentEvent ? (
           <>
@@ -291,7 +374,7 @@ function App() {
                   earnedPerTask={earnedPerTask}
                   onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
                 />
-              ) : (
+              ) : activeTab === 'terminal' ? (
                 <AudienceTerminalSection 
                   event={currentEvent}
                   totalEarnedNIM={totalEarned}
@@ -302,6 +385,8 @@ function App() {
                   onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
                   onClaimSuccess={handleClaimSuccess}
                 />
+              ) : (
+                <SettingsPanel nimiqAddress={nimiqAddress} isInsideNimiqPay={isInsideNimiqPay} totalEarned={totalEarned} events={events} />
               )}
             </div>
 

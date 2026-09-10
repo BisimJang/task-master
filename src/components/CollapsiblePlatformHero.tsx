@@ -89,11 +89,21 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
               </h1>
 
               <p className="text-sm sm:text-base text-[#121417]/85 font-medium leading-relaxed mt-3 max-w-3xl">
-                EventQuest transforms passive conference audiences into active participants. Event creators
-                configure panel sessions, attach trivia questions with custom NIM bounties per question,
-                and drop them live to audience phones the moment speakers wrap up. Payouts confirm
-                on-chain in 1 second directly inside Nimiq Pay with zero gas fees.
+                Host a quiz at your next event, drop it live to every phone in the room, and automatically pay out real NIM to whoever gets it right first — no apps to download, no gas fees, just instant rewards straight to the wallet.
               </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <a
+                  href="?host=1"
+                  onClick={e => { e.preventDefault(); document.querySelector<HTMLButtonElement>('[data-open-creator]')?.click() }}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#121417] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro hover:translate-y-[2px] hover:shadow-retro-sm transition-all"
+                >
+                  <Mic2 className="w-5 h-5" /> Host an Event
+                </a>
+                <div className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/80 border-2 border-[#121417] rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro-sm">
+                  <Smartphone className="w-5 h-5" /> Open in Nimiq Pay to Join
+                </div>
+              </div>
             </div>
           </div>
 
