@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   Radio, Users, AlertCircle, CheckCircle2, Plus, Lock,
-  Share2, FileText, Globe, Gamepad2, Wrench, ExternalLink, HelpCircle, Flame
+  Share2, FileText, Globe, Gamepad2, Wrench, ExternalLink, HelpCircle, Flame, ArrowLeft
 } from 'lucide-react'
 import type { StageEvent, SessionTask } from '../lib/types'
 
@@ -10,6 +10,7 @@ interface LiveSessionsSectionProps {
   onTaskComplete: (taskId: string, optionIndex: number) => void
   earnedPerTask: Record<string, boolean>
   onOpenCreatorMenu?: () => void
+  onBack?: () => void
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -186,6 +187,7 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
   onTaskComplete,
   earnedPerTask,
   onOpenCreatorMenu,
+  onBack,
 }) => {
   if (!event) {
     return (
@@ -219,10 +221,21 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
       <div>
         {/* Event Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-4">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Stage Event</span>
-            <h2 className="font-display font-black text-xl text-[#121417] tracking-tight">{event.title}</h2>
-            {event.organizer && <span className="text-xs text-[#121417]/60 font-medium">{event.organizer}</span>}
+          <div className="flex items-center gap-3">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="p-2 rounded-xl bg-[#F4F4F6] hover:bg-neutral-200 border-2 border-[#121417]/10 transition-all text-[#121417] flex items-center justify-center cursor-pointer shadow-xs"
+                title="Back to All Events"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Stage Event</span>
+              <h2 className="font-display font-black text-xl text-[#121417] tracking-tight">{event.title}</h2>
+              {event.organizer && <span className="text-xs text-[#121417]/60 font-medium">{event.organizer}</span>}
+            </div>
           </div>
           {onOpenCreatorMenu && (
             <button onClick={onOpenCreatorMenu}

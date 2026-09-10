@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap, QrCode, Scan, Mic2, Settings } from 'lucide-react'
+import { Sparkles, Zap, QrCode, Scan, Mic2, Settings, ArrowLeft } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
@@ -263,6 +263,12 @@ function App() {
      console.log('Claim Success!', txHash, amount)
   }
 
+  const handleGoHome = () => {
+    setCurrentEvent(null)
+    setActiveTab('stage')
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
   // Determine if current user is the creator
   const isCreator = !currentEvent || 
     (currentEvent.creatorAddress && nimiqAddress && currentEvent.creatorAddress.toLowerCase() === nimiqAddress.toLowerCase())
@@ -273,12 +279,24 @@ function App() {
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b-2 border-[#121417] px-4 py-3 flex items-center justify-between shadow-retro-sm">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#121417] flex items-center justify-center border-2 border-white shadow-[0_0_0_2px_#121417]">
-            <Zap className="w-4 h-4 text-[#FBD023]" />
-          </div>
-          <div>
-            <h1 className="font-display font-black text-sm tracking-tight uppercase">EventQuest</h1>
-            <p className="text-[9px] font-black tracking-widest text-[#121417]/50 uppercase">Nimiq Pay</p>
+          {currentEvent && (
+            <button
+              onClick={handleGoHome}
+              className="p-1.5 rounded-xl bg-[#F4F4F6] hover:bg-neutral-200 border-2 border-[#121417]/10 transition-all text-[#121417] flex items-center gap-1 text-xs font-black mr-1 cursor-pointer shadow-xs"
+              title="Back to All Events / Home"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
+          <div className="flex items-center gap-2 cursor-pointer" onClick={handleGoHome} title="Go to Home">
+            <div className="w-8 h-8 rounded-full bg-[#121417] flex items-center justify-center border-2 border-white shadow-[0_0_0_2px_#121417]">
+              <Zap className="w-4 h-4 text-[#FBD023]" />
+            </div>
+            <div>
+              <h1 className="font-display font-black text-sm tracking-tight uppercase">EventQuest</h1>
+              <p className="text-[9px] font-black tracking-widest text-[#121417]/50 uppercase">Nimiq Pay</p>
+            </div>
           </div>
         </div>
 
@@ -372,6 +390,7 @@ function App() {
                 onTaskComplete={handleTaskComplete}
                 earnedPerTask={earnedPerTask}
                 onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                onBack={handleGoHome}
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95">
@@ -433,6 +452,7 @@ function App() {
                   onTaskComplete={handleTaskComplete}
                   earnedPerTask={earnedPerTask}
                   onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                  onBack={handleGoHome}
                 />
               </div>
               <div className="sticky top-24">
