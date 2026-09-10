@@ -227,6 +227,12 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          {nimiqAddress && (
+            <div className="hidden sm:flex bg-white text-[#121417] px-3 py-1.5 rounded-full items-center gap-1.5 shadow-retro-sm border-2 border-[#121417]/10" title="Connected Wallet">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono text-[10px] font-bold">{nimiqAddress.slice(0, 9)}...{nimiqAddress.slice(-4)}</span>
+            </div>
+          )}
           <div className="bg-[#121417] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border-2 border-transparent hover:border-[#FBD023] transition-colors shadow-retro-sm cursor-pointer">
             <Sparkles className="w-3.5 h-3.5 text-[#FBD023]" />
             <span className="font-black text-xs">{totalEarned} NIM</span>
@@ -272,7 +278,7 @@ function App() {
       {/* MAIN CONTENT */}
       <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
         
-        <CollapsiblePlatformHero onHostClick={() => setIsCreatorModalOpen(true)} />
+        <CollapsiblePlatformHero />
 
         {currentEvent ? (
           <>

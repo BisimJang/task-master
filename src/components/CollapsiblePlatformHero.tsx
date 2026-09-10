@@ -14,10 +14,10 @@ import {
 } from 'lucide-react'
 
 interface HeroProps {
-  onHostClick?: () => void;
+  // onHostClick is not needed here anymore, but keeping interface for future expansion if needed, or remove completely
 }
 
-export const CollapsiblePlatformHero: React.FC<HeroProps> = ({ onHostClick }) => {
+export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
