@@ -41,12 +41,8 @@ function App() {
       const searchParams = new URLSearchParams(window.location.search)
       const eventSlug = searchParams.get('event')
       let active = null
-      if (loadedEvents.length > 0) {
-        if (eventSlug) {
-          active = loadedEvents.find(e => e.slug === eventSlug) || loadedEvents[0]
-        } else {
-          active = loadedEvents[0]
-        }
+      if (loadedEvents.length > 0 && eventSlug) {
+        active = loadedEvents.find(e => e.slug === eventSlug) || null
         setCurrentEvent(active)
       }
     }
@@ -278,52 +274,72 @@ function App() {
         
         <CollapsiblePlatformHero />
 
-        {/* MOBILE VIEW */}
-        <div className="md:hidden">
-          {activeTab === 'stage' ? (
-            <LiveSessionsSection 
-              event={currentEvent} 
-              onTaskComplete={handleTaskComplete}
-              earnedPerTask={earnedPerTask}
-              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-            />
-          ) : (
-            <AudienceTerminalSection 
-              event={currentEvent}
-              totalEarnedNIM={totalEarned}
-              nimiqAddress={nimiqAddress}
-              deviceId={deviceId}
-              isInsideNimiqPay={isInsideNimiqPay}
-              nimiqProvider={nimiqProvider}
-              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-              onClaimSuccess={handleClaimSuccess}
-            />
-          )}
-        </div>
+        {currentEvent ? (
+          <>
+            {/* MOBILE VIEW */}
+            <div className="md:hidden">
+              {activeTab === 'stage' ? (
+                <LiveSessionsSection 
+                  event={currentEvent} 
+                  onTaskComplete={handleTaskComplete}
+                  earnedPerTask={earnedPerTask}
+                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                />
+              ) : (
+                <AudienceTerminalSection 
+                  event={currentEvent}
+                  totalEarnedNIM={totalEarned}
+                  nimiqAddress={nimiqAddress}
+                  deviceId={deviceId}
+                  isInsideNimiqPay={isInsideNimiqPay}
+                  nimiqProvider={nimiqProvider}
+                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                  onClaimSuccess={handleClaimSuccess}
+                />
+              )}
+            </div>
 
-        {/* DESKTOP GRID */}
-        <div className="hidden md:grid grid-cols-[1.5fr_1fr] gap-6 items-start">
-          <div className="sticky top-24">
-            <LiveSessionsSection 
-              event={currentEvent}
-              onTaskComplete={handleTaskComplete}
-              earnedPerTask={earnedPerTask}
-              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-            />
+            {/* DESKTOP GRID */}
+            <div className="hidden md:grid grid-cols-[1.5fr_1fr] gap-6 items-start">
+              <div className="sticky top-24">
+                <LiveSessionsSection 
+                  event={currentEvent}
+                  onTaskComplete={handleTaskComplete}
+                  earnedPerTask={earnedPerTask}
+                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                />
+              </div>
+              <div className="sticky top-24">
+                <AudienceTerminalSection 
+                  event={currentEvent}
+                  totalEarnedNIM={totalEarned}
+                  nimiqAddress={nimiqAddress}
+                  deviceId={deviceId}
+                  isInsideNimiqPay={isInsideNimiqPay}
+                  nimiqProvider={nimiqProvider}
+                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                  onClaimSuccess={handleClaimSuccess}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95">
+            <div className="w-24 h-24 bg-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-lg transform rotate-3">
+              <Zap className="w-12 h-12 text-[#FBD023]" />
+            </div>
+            <h2 className="font-display font-black text-4xl tracking-tight text-[#121417] mb-4">Welcome to EventQuest</h2>
+            <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8">
+              Scan a live event QR code or click an event link to join the stage and earn NIM rewards!
+            </p>
+            <button 
+              onClick={() => setIsCreatorModalOpen(true)}
+              className="px-6 py-3 bg-white border-2 border-[#121417] rounded-xl font-black text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all"
+            >
+              Or Host an Event
+            </button>
           </div>
-          <div className="sticky top-24">
-            <AudienceTerminalSection 
-              event={currentEvent}
-              totalEarnedNIM={totalEarned}
-              nimiqAddress={nimiqAddress}
-              deviceId={deviceId}
-              isInsideNimiqPay={isInsideNimiqPay}
-              nimiqProvider={nimiqProvider}
-              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
-              onClaimSuccess={handleClaimSuccess}
-            />
-          </div>
-        </div>
+        )}
 
       </main>
 

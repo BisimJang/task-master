@@ -29,6 +29,11 @@ export async function saveClaim(claim: AttendeeClaimRecord): Promise<void> {
   if (error) console.error('Error saving claim:', error)
 }
 
+export async function updateClaimTxHash(claimId: string, txHash: string): Promise<void> {
+  const { error } = await supabase.from('claims').update({ txHash }).eq('id', claimId)
+  if (error) console.error('Error updating claim txHash:', error)
+}
+
 export async function hasClaimedTask(eventId: string, taskId: string, walletAddress: string, deviceId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('claims')

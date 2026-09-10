@@ -5,6 +5,8 @@ import {
 import type { StageEvent, SessionTask } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
+import { getClaims, updateClaimTxHash } from '../lib/db'
+import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
 
 interface CreatorUtilityModalProps {
   isOpen: boolean
@@ -22,7 +24,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   isOpen, onClose, events: _events, activeEvent, onSelectEvent, onCreateEvent, onUpdateEvent, onFundPool, onClearAllData
 }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
-  const [viewMode, setViewMode] = useState<'wizard' | 'manage'>(activeEvent ? 'manage' : 'wizard')
+  const [viewMode, setViewMode] = useState<'wizard' | 'manage' | 'dashboard'>(activeEvent ? 'manage' : (_events && _events.length > 0 ? 'dashboard' : 'wizard'))
 
   // ... (keep rest of state exactly as before)
   const [draftTitle, setDraftTitle] = useState('')
@@ -53,15 +55,18 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   // QR display state
   const [showQrFor, setShowQrFor] = useState<string | null>(null)
 
+  const [isAirdropping, setIsAirdropping] = useState(false)
+  const [airdropMsg, setAirdropMsg] = useState('')
+
   useEffect(() => {
     if (!isOpen) return
     if (activeEvent) {
       setViewMode('manage')
     } else {
-      setViewMode('wizard')
+      setViewMode(_events && _events.length > 0 ? 'dashboard' : 'wizard')
       setStep(1)
     }
-  }, [isOpen, activeEvent])
+  }, [isOpen, activeEvent, _events])
 
   if (!isOpen) return null
 
@@ -210,6 +215,49 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
     setViewMode('manage')
   }
 
+  const handleAirdrop = async () => {
+    if (!activeEvent) return
+    setIsAirdropping(true)
+    setAirdropMsg('Fetching pending winners...')
+
+    try {
+      const allClaims = await getClaims()
+      const pendingEventClaims = allClaims.filter(c => c.eventId === activeEvent.id && c.txHash === 'pending' && c.walletAddress && c.walletAddress !== 'unlinked')
+
+      if (pendingEventClaims.length === 0) {
+        setAirdropMsg('No pending winners found!')
+        setTimeout(() => setAirdropMsg(''), 3000)
+        setIsAirdropping(false)
+        return
+      }
+
+      setAirdropMsg(`Airdropping to ${pendingEventClaims.length} winners...`)
+      const provider = await initNimiqProvider()
+
+      let successCount = 0
+      for (const claim of pendingEventClaims) {
+        try {
+          const tx = await claimNimiqReward(provider, claim.walletAddress, claim.amountNIM)
+          if (tx) {
+            await updateClaimTxHash(claim.id, tx)
+            successCount++
+          }
+        } catch (e) {
+          console.error('Failed to airdrop claim', claim.id, e)
+        }
+      }
+
+      setAirdropMsg(`Successfully airdropped to ${successCount} winners!`)
+      setTimeout(() => setAirdropMsg(''), 4000)
+    } catch (err) {
+      console.error(err)
+      setAirdropMsg('Airdrop failed. Check console.')
+      setTimeout(() => setAirdropMsg(''), 3000)
+    }
+
+    setIsAirdropping(false)
+  }
+
   const inputCls = 'w-full text-xs font-bold p-2.5 rounded-xl border-2 border-[#121417] bg-[#F4F4F6]'
   const softInputCls = 'w-full text-xs p-2.5 rounded-xl border border-neutral-300'
   const labelCls = 'block text-[11px] font-bold text-[#121417]/80 mb-1'
@@ -302,19 +350,52 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
           <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Creator Hub</span>
         </div>
         <h2 className="font-display font-black text-2xl tracking-tight text-[#121417]">
-          {viewMode === 'wizard' ? 'Create Event' : 'Manage Event'}
+          {viewMode === 'wizard' ? 'Create Event' : viewMode === 'dashboard' ? 'Event Dashboard' : 'Manage Event'}
         </h2>
 
         {activeEvent && viewMode === 'manage' && (
           <div className="mt-4 flex gap-2">
-            <button onClick={() => { setViewMode('wizard'); setStep(1); }} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-[#121417] flex items-center gap-1.5">
-              <FolderPlus className="w-3.5 h-3.5" /><span>Create New Event</span>
+            <button onClick={() => { setViewMode('dashboard'); }} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-[#121417] flex items-center gap-1.5">
+              <FolderPlus className="w-3.5 h-3.5" /><span>Event Dashboard</span>
             </button>
             {onClearAllData && (
                <button onClick={() => { if(confirm('Wipe everything?')) onClearAllData() }} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-1.5">
                  <Trash2 className="w-3.5 h-3.5" /><span>Reset Data</span>
                </button>
             )}
+          </div>
+        )}
+
+        {/* --- DASHBOARD MODE --- */}
+        {viewMode === 'dashboard' && (
+          <div className="mt-6 space-y-4 animate-in fade-in">
+            {_events && _events.length > 0 ? (
+              <div className="space-y-3">
+                {_events.map(ev => (
+                  <button 
+                    key={ev.id}
+                    onClick={() => { onSelectEvent(ev); setViewMode('manage'); }}
+                    className="w-full text-left p-4 rounded-2xl border-2 border-neutral-200 hover:border-[#121417] bg-[#F4F4F6] transition-colors"
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="font-black text-[#121417] text-sm">{ev.title}</p>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">{ev.totalPoolNIM} NIM</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{ev.tasks.length} Quizzes</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl bg-[#F4F4F6]">
+                <p className="text-xs text-[#121417]/40 font-black uppercase tracking-widest">No events created yet</p>
+              </div>
+            )}
+            <button 
+              onClick={() => { setViewMode('wizard'); setStep(1); }} 
+              className="w-full py-4 mt-2 rounded-2xl bg-[#121417] text-white font-black text-xs uppercase shadow-retro-sm hover:bg-black flex justify-center items-center gap-2"
+            >
+              <FolderPlus className="w-4 h-4" /> Create New Event
+            </button>
           </div>
         )}
 
@@ -482,6 +563,24 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   </div>
                 )
               })}
+            </div>
+
+            {/* Airdrop Rewards */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-black text-sm text-[#121417]">Batch Airdrop Rewards</h4>
+                  <p className="text-[10px] font-bold text-neutral-500">Distribute NIM to pending winners from your wallet.</p>
+                </div>
+                <button 
+                  onClick={handleAirdrop} 
+                  disabled={isAirdropping}
+                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-xs uppercase hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isAirdropping ? 'Processing...' : 'Airdrop Now'}
+                </button>
+              </div>
+              {airdropMsg && <p className="text-xs font-bold text-purple-600 mt-2">{airdropMsg}</p>}
             </div>
 
             {/* Fund More */}
