@@ -8,12 +8,14 @@ import type { StageEvent, AttendeeClaimRecord } from './lib/types'
 import { getEvents, saveEvent, getClaims, saveClaim, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
 import { initNimiqProvider, type NimiqProviderInstance } from './lib/nimiq'
 
-function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, events }: {
+function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, claims }: {
   nimiqAddress: string | null
   isInsideNimiqPay: boolean
   totalEarned: number
-  events: StageEvent[]
+  claims: AttendeeClaimRecord[]
 }) {
+  const joinedCount = new Set(claims.filter(c => c.walletAddress && c.walletAddress === nimiqAddress).map(c => c.eventId)).size
+
   return (
     <div className="space-y-4 pt-4 pb-28">
       {/* Wallet Card */}
@@ -36,7 +38,7 @@ function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, events }: 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50 mb-1">Events Joined</p>
-          <p className="font-black text-2xl text-[#121417]">{events.length}</p>
+          <p className="font-black text-2xl text-[#121417]">{joinedCount}</p>
         </div>
         <div className="bg-[#FBD023] border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50 mb-1">NIM Earned</p>
@@ -437,7 +439,7 @@ function App() {
               nimiqAddress={nimiqAddress} 
               isInsideNimiqPay={isInsideNimiqPay} 
               totalEarned={totalEarned} 
-              events={events} 
+              claims={claims} 
             />
           )}
         </div>
@@ -507,6 +509,7 @@ function App() {
           onClose={() => setIsCreatorModalOpen(false)}
           events={events}
           activeEvent={currentEvent}
+          connectedAddress={nimiqAddress}
           onSelectEvent={handleSelectEvent}
           onCreateEvent={handleCreateEvent}
           onUpdateEvent={handleUpdateEvent}

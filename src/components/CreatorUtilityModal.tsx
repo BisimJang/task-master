@@ -13,6 +13,7 @@ interface CreatorUtilityModalProps {
   onClose: () => void
   events?: StageEvent[]
   activeEvent: StageEvent | null
+  connectedAddress?: string | null
   onSelectEvent: (event: StageEvent) => void
   onCreateEvent: (newEvent: StageEvent) => void
   onUpdateEvent: (updatedEvent: StageEvent) => void
@@ -21,7 +22,7 @@ interface CreatorUtilityModalProps {
 }
 
 export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
-  isOpen, onClose, events: _events, activeEvent, onSelectEvent, onCreateEvent, onUpdateEvent, onFundPool, onClearAllData
+  isOpen, onClose, events: _events, activeEvent, connectedAddress, onSelectEvent, onCreateEvent, onUpdateEvent, onFundPool, onClearAllData
 }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [viewMode, setViewMode] = useState<'wizard' | 'manage' | 'dashboard'>(activeEvent ? 'manage' : (_events && _events.length > 0 ? 'dashboard' : 'wizard'))
@@ -369,27 +370,34 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
         {/* --- DASHBOARD MODE --- */}
         {viewMode === 'dashboard' && (
           <div className="mt-6 space-y-4 animate-in fade-in">
-            {_events && _events.length > 0 ? (
-              <div className="space-y-3">
-                {_events.map(ev => (
-                  <button 
-                    key={ev.id}
-                    onClick={() => { onSelectEvent(ev); setViewMode('manage'); }}
-                    className="w-full text-left p-4 rounded-2xl border-2 border-neutral-200 hover:border-[#121417] bg-[#F4F4F6] transition-colors"
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="font-black text-[#121417] text-sm">{ev.title}</p>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">{ev.totalPoolNIM} NIM</span>
-                    </div>
-                    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{ev.tasks.length} Quizzes</p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl bg-[#F4F4F6]">
-                <p className="text-xs text-[#121417]/40 font-black uppercase tracking-widest">No events created yet</p>
-              </div>
-            )}
+            {(() => {
+              const myEvents = (_events || []).filter(ev => {
+                if (!connectedAddress) return true
+                if (!ev.creatorAddress || ev.creatorAddress === 'unlinked') return true
+                return ev.creatorAddress.toLowerCase() === connectedAddress.toLowerCase()
+              })
+              return myEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {myEvents.map(ev => (
+                    <button 
+                      key={ev.id}
+                      onClick={() => { onSelectEvent(ev); setViewMode('manage'); }}
+                      className="w-full text-left p-4 rounded-2xl border-2 border-neutral-200 hover:border-[#121417] bg-[#F4F4F6] transition-colors"
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="font-black text-[#121417] text-sm">{ev.title}</p>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">{ev.totalPoolNIM} NIM</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{ev.tasks.length} Quizzes</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-2xl bg-[#F4F4F6]">
+                  <p className="text-xs text-[#121417]/40 font-black uppercase tracking-widest">No events created by your wallet yet</p>
+                </div>
+              )
+            })()}
             <button 
               onClick={() => { setViewMode('wizard'); setStep(1); }} 
               className="w-full py-4 mt-2 rounded-2xl bg-[#121417] text-white font-black text-xs uppercase shadow-retro-sm hover:bg-black flex justify-center items-center gap-2"
