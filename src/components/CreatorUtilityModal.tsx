@@ -197,6 +197,10 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   }
 
   const handlePublish = () => {
+    if (!connectedAddress) {
+      alert('You must be signed in with a Nimiq wallet before you can create an event.')
+      return
+    }
     if (!draftTitle.trim()) return
     const slug = draftTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     const newEvent: StageEvent = {
@@ -207,7 +211,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       organizer: draftOrg.trim(),
       totalPoolNIM: Number(draftPool) || 0,
       tasks: draftTasks,
-      published: true
+      published: true,
+      creatorAddress: connectedAddress
     }
     
     onCreateEvent(newEvent)

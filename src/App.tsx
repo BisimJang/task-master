@@ -362,6 +362,15 @@ function App() {
   const isCreator = !currentEvent || 
     (currentEvent.creatorAddress && nimiqAddress && currentEvent.creatorAddress.toLowerCase() === nimiqAddress.toLowerCase())
 
+  const handleOpenCreator = () => {
+    if (!nimiqAddress) {
+      alert('You must connect your Nimiq wallet before you can create an event.')
+      setIsWalletModalOpen(true)
+      return
+    }
+    setIsCreatorModalOpen(true)
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F4F6] text-[#121417] selection:bg-[#FF532F] selection:text-white pb-24 md:pb-0 font-sans">
       
@@ -418,7 +427,7 @@ function App() {
           {isCreator && (
             <button 
               data-open-creator
-              onClick={() => setIsCreatorModalOpen(true)}
+              onClick={handleOpenCreator}
               className="w-8 h-8 rounded-full bg-white border-2 border-[#121417] flex items-center justify-center hover:bg-neutral-100 shadow-retro-sm transition-all"
             >
               <div className="w-1 h-1 rounded-full bg-[#121417] space-x-1 flex gap-0.5">
@@ -446,7 +455,7 @@ function App() {
 
           {/* Create */}
           <button
-            onClick={() => setIsCreatorModalOpen(true)}
+            onClick={handleOpenCreator}
             className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all text-[#121417]/40 relative"
           >
             <div className="w-10 h-10 rounded-2xl bg-[#121417] flex items-center justify-center shadow-retro-sm -mt-6 border-2 border-white">
@@ -490,7 +499,7 @@ function App() {
       <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
         
         <CollapsiblePlatformHero />
-        <button data-open-creator className="hidden" onClick={() => setIsCreatorModalOpen(true)} />
+        <button data-open-creator className="hidden" onClick={handleOpenCreator} />
 
         {/* MOBILE VIEW (always switches based on activeTab) */}
         <div className="md:hidden">
@@ -500,7 +509,7 @@ function App() {
                 event={currentEvent} 
                 onTaskComplete={handleTaskComplete}
                 earnedPerTask={earnedPerTask}
-                onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
                 onBack={handleGoHome}
                 isStarred={starredEventIds.includes(currentEvent.id)}
                 onToggleStar={() => handleToggleStar(currentEvent.id)}
@@ -511,7 +520,7 @@ function App() {
                 starredEventIds={starredEventIds}
                 onToggleStar={handleToggleStar}
                 onSelectEvent={handleSelectEvent}
-                onOpenCreator={() => setIsCreatorModalOpen(true)}
+                onOpenCreator={handleOpenCreator}
                 nimiqAddress={nimiqAddress}
                 onConnectWallet={handleConnectWallet}
               />
@@ -524,7 +533,7 @@ function App() {
               deviceId={deviceId}
               isInsideNimiqPay={isInsideNimiqPay}
               nimiqProvider={nimiqProvider}
-              onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+              onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
               onClaimSuccess={handleClaimSuccess}
             />
           ) : (
@@ -548,7 +557,7 @@ function App() {
                   event={currentEvent} 
                   onTaskComplete={handleTaskComplete}
                   earnedPerTask={earnedPerTask}
-                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                  onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
                   onBack={handleGoHome}
                   isStarred={starredEventIds.includes(currentEvent.id)}
                   onToggleStar={() => handleToggleStar(currentEvent.id)}
@@ -562,7 +571,7 @@ function App() {
                   deviceId={deviceId}
                   isInsideNimiqPay={isInsideNimiqPay}
                   nimiqProvider={nimiqProvider}
-                  onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
+                  onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
                   onClaimSuccess={handleClaimSuccess}
                 />
               </div>
@@ -573,7 +582,7 @@ function App() {
               starredEventIds={starredEventIds}
               onToggleStar={handleToggleStar}
               onSelectEvent={handleSelectEvent}
-              onOpenCreator={() => setIsCreatorModalOpen(true)}
+              onOpenCreator={handleOpenCreator}
               nimiqAddress={nimiqAddress}
               onConnectWallet={handleConnectWallet}
             />
