@@ -58,6 +58,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
   const [isAirdropping, setIsAirdropping] = useState(false)
   const [airdropMsg, setAirdropMsg] = useState('')
+  const [manageTab, setManageTab] = useState<'quizzes' | 'share' | 'payouts'>('quizzes')
 
   useEffect(() => {
     if (!isOpen) return
@@ -340,32 +341,41 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white border-3 border-[#121417] rounded-[32px] p-6 sm:p-8 shadow-retro-lg text-[#121417] my-8">
-        <button onClick={onClose} className="absolute top-5 right-5 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 border border-black/10 flex items-center justify-center cursor-pointer transition-colors">
-          <X className="w-4 h-4 text-[#121417]" />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="relative w-full max-w-2xl bg-white border-t-3 sm:border-3 border-[#121417] rounded-t-[32px] sm:rounded-[32px] p-5 sm:p-7 shadow-retro-lg text-[#121417] max-h-[92vh] sm:max-h-[88vh] flex flex-col">
+        {/* Mobile handle indicator */}
+        <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
 
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#FF532F]" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Creator Hub</span>
-        </div>
-        <h2 className="font-display font-black text-2xl tracking-tight text-[#121417]">
-          {viewMode === 'wizard' ? 'Create Event' : viewMode === 'dashboard' ? 'Event Dashboard' : 'Manage Event'}
-        </h2>
+        {/* Sticky Header */}
+        <div className="shrink-0 pb-3 border-b border-neutral-100 relative">
+          <button onClick={onClose} className="absolute top-0 right-0 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 border border-black/10 flex items-center justify-center cursor-pointer transition-colors">
+            <X className="w-4 h-4 text-[#121417]" />
+          </button>
 
-        {activeEvent && viewMode === 'manage' && (
-          <div className="mt-4 flex gap-2">
-            <button onClick={() => { setViewMode('dashboard'); }} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-[#121417] flex items-center gap-1.5">
-              <FolderPlus className="w-3.5 h-3.5" /><span>Event Dashboard</span>
-            </button>
-            {onClearAllData && (
-               <button onClick={() => { if(confirm('Wipe everything?')) onClearAllData() }} className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-1.5">
-                 <Trash2 className="w-3.5 h-3.5" /><span>Reset Data</span>
-               </button>
-            )}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF532F]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Creator Hub</span>
           </div>
-        )}
+          <h2 className="font-display font-black text-xl sm:text-2xl tracking-tight text-[#121417]">
+            {viewMode === 'wizard' ? 'Create Event' : viewMode === 'dashboard' ? 'Event Dashboard' : 'Manage Event'}
+          </h2>
+
+          {activeEvent && viewMode === 'manage' && (
+            <div className="mt-3 flex gap-2">
+              <button onClick={() => { setViewMode('dashboard'); }} className="px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 hover:bg-neutral-200 text-[#121417] flex items-center gap-1.5 cursor-pointer">
+                <FolderPlus className="w-3.5 h-3.5" /><span>Event Dashboard</span>
+              </button>
+              {onClearAllData && (
+                 <button onClick={() => { if(confirm('Wipe everything?')) onClearAllData() }} className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 flex items-center gap-1.5 cursor-pointer">
+                   <Trash2 className="w-3.5 h-3.5" /><span>Reset Data</span>
+                 </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto pr-1 mt-3 space-y-4 overscroll-contain">
 
         {/* --- DASHBOARD MODE --- */}
         {viewMode === 'dashboard' && (
@@ -483,129 +493,190 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
         {/* --- MANAGE EVENT (PUBLISHED) --- */}
         {viewMode === 'manage' && activeEvent && (
-          <div className="mt-6 space-y-6 animate-in fade-in">
-            <div className="p-4 bg-emerald-50 border-2 border-emerald-500 rounded-2xl flex justify-between items-center">
+          <div className="mt-4 space-y-4 animate-in fade-in">
+            {/* Header summary */}
+            <div className="p-3.5 bg-emerald-50 border-2 border-emerald-500 rounded-2xl flex justify-between items-center">
               <div>
-                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1">Published</p>
-                <h3 className="font-display font-black text-lg text-[#121417]">{activeEvent.title}</h3>
+                <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Published Event</p>
+                <h3 className="font-display font-black text-base sm:text-lg text-[#121417] leading-tight">{activeEvent.title}</h3>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-[#121417]/60 uppercase">Prize Pool</p>
-                <p className="font-black text-emerald-700">{activeEvent.totalPoolNIM} NIM</p>
+                <p className="font-black text-emerald-700 text-sm sm:text-base">{activeEvent.totalPoolNIM} NIM</p>
               </div>
             </div>
 
-            {isAddingTaskPostPublish ? (
-              <div className="pt-4 border-t">
-                <h4 className="font-black text-sm text-[#121417] mb-3">Add New Quiz</h4>
-                {renderTaskForm()}
-              </div>
-            ) : (
-              <button onClick={() => setIsAddingTaskPostPublish(true)} className="w-full py-3 rounded-xl border-2 border-dashed border-[#121417]/30 text-[#121417]/60 font-black text-xs uppercase hover:border-[#121417] hover:text-[#121417] transition-all flex items-center justify-center gap-1">
-                <Plus className="w-4 h-4" /> Add Quiz to Published Event
+            {/* Sub-tabs for Mobile UX */}
+            <div className="flex bg-[#F4F4F6] p-1 rounded-2xl border border-neutral-200">
+              <button
+                type="button"
+                onClick={() => setManageTab('quizzes')}
+                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                  manageTab === 'quizzes' ? 'bg-[#121417] text-white shadow-retro-sm' : 'text-[#121417]/60 hover:text-[#121417]'
+                }`}
+              >
+                Quizzes ({activeEvent.tasks.length})
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setManageTab('share')}
+                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                  manageTab === 'share' ? 'bg-[#121417] text-white shadow-retro-sm' : 'text-[#121417]/60 hover:text-[#121417]'
+                }`}
+              >
+                Share & QR
+              </button>
+              <button
+                type="button"
+                onClick={() => setManageTab('payouts')}
+                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
+                  manageTab === 'payouts' ? 'bg-[#121417] text-white shadow-retro-sm' : 'text-[#121417]/60 hover:text-[#121417]'
+                }`}
+              >
+                Airdrop & Pool
+              </button>
+            </div>
 
-            {/* Share Links & QR */}
-            <div className="space-y-3 pt-4 border-t">
-              <h4 className="font-black text-sm text-[#121417]">Share Links & QR Codes</h4>
-              <div className="p-3 bg-[#F4F4F6] rounded-xl flex items-center justify-between gap-3">
-                <div className="truncate">
-                  <p className="text-[10px] font-bold text-[#121417]/60 uppercase">Full Event Link</p>
-                  <p className="text-xs font-mono truncate">{getShareLink(activeEvent)}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowQrFor(showQrFor === 'event' ? null : 'event')} className="text-[10px] font-black text-[#121417]/60 hover:text-[#121417] underline">Show QR</button>
-                  <button onClick={() => handleCopy(getShareLink(activeEvent))} className="p-2 bg-white rounded-lg border shadow-sm shrink-0">
-                    {copiedLink === getShareLink(activeEvent) ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            {/* TAB 1: QUIZZES */}
+            {manageTab === 'quizzes' && (
+              <div className="space-y-3 animate-in fade-in">
+                {isAddingTaskPostPublish ? (
+                  <div className="pt-2">
+                    <h4 className="font-black text-sm text-[#121417] mb-2">Add New Quiz</h4>
+                    {renderTaskForm()}
+                  </div>
+                ) : (
+                  <button onClick={() => setIsAddingTaskPostPublish(true)} className="w-full py-3 rounded-xl border-2 border-dashed border-[#121417]/30 text-[#121417]/70 font-black text-xs uppercase hover:border-[#121417] hover:text-[#121417] transition-all flex items-center justify-center gap-1.5 bg-[#F4F4F6]">
+                    <Plus className="w-4 h-4" /> Add Quiz to Event
                   </button>
-                </div>
-              </div>
-              {showQrFor === 'event' && (
-                <div className="p-4 bg-white rounded-xl border flex justify-center animate-in fade-in zoom-in-95">
-                  <QRCodeSVG value={getShareLink(activeEvent)} size={200} />
-                </div>
-              )}
+                )}
 
-              {activeEvent.tasks.map((task, i) => {
-                const link = getShareLink(activeEvent, task.id)
-                return (
-                  <div key={task.id} className="space-y-2">
-                    <div className="p-3 bg-[#F4F4F6] rounded-xl flex items-center justify-between gap-3 border border-neutral-200">
+                <div className="space-y-2 pt-2">
+                  {activeEvent.tasks.map((task, i) => (
+                    <div key={task.id} className="p-3 bg-[#F4F4F6] rounded-xl flex items-center justify-between gap-2 border border-neutral-200">
                       <div className="truncate flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-[10px] font-bold text-[#121417]/60 uppercase">Quiz {i+1}</span>
-                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#121417] text-white">
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-[#121417] text-white">
                             {task.rewardNIM} NIM
                           </span>
-                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700">
                             {task.winnerCount}/{task.maxWinners} Claimed
                           </span>
                         </div>
                         <p className="text-xs font-black truncate">{task.title}</p>
                       </div>
                       
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => handleToggleLock(task.id)} 
-                            className={`px-2 py-1 rounded text-[10px] font-black uppercase border ${task.isLocked ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
-                          >
-                            {task.isLocked ? 'Unlock Quiz' : 'Lock Quiz'}
-                          </button>
-                          <button onClick={() => setShowQrFor(showQrFor === task.id ? null : task.id)} className="text-[10px] font-black text-[#121417]/60 hover:text-[#121417] underline ml-1">
-                            QR
-                          </button>
-                          <button onClick={() => handleCopy(link)} className="p-1.5 bg-white rounded border shadow-sm">
-                            {copiedLink === link ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                      </div>
+                      <button 
+                        onClick={() => handleToggleLock(task.id)} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase border shrink-0 transition-all ${task.isLocked ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'}`}
+                      >
+                        {task.isLocked ? 'Unlock' : 'Lock'}
+                      </button>
                     </div>
-                    {showQrFor === task.id && (
-                      <div className="p-4 bg-white rounded-xl border flex flex-col items-center gap-2 animate-in fade-in zoom-in-95">
-                        <QRCodeSVG value={link} size={150} />
-                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{task.title}</p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Airdrop Rewards */}
-            <div className="pt-4 border-t">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-black text-sm text-[#121417]">Batch Airdrop Rewards</h4>
-                  <p className="text-[10px] font-bold text-neutral-500">Distribute NIM to pending winners from your wallet.</p>
+                  ))}
                 </div>
-                <button 
-                  onClick={handleAirdrop} 
-                  disabled={isAirdropping}
-                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-xs uppercase hover:bg-purple-700 disabled:opacity-50"
-                >
-                  {isAirdropping ? 'Processing...' : 'Airdrop Now'}
-                </button>
               </div>
-              {airdropMsg && <p className="text-xs font-bold text-purple-600 mt-2">{airdropMsg}</p>}
-            </div>
+            )}
 
-            {/* Fund More */}
-            <div className="pt-4 border-t">
-              <h4 className="font-black text-sm text-[#121417] mb-2">Fund Pool (Nimiq Pay)</h4>
-              <div className="flex gap-2">
-                <input type="number" placeholder="NIM" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className={softInputCls} />
-                <button onClick={() => {onFundPool(Number(fundAmount) || 0); setFundAmount('');}} className="px-4 rounded-xl bg-[#121417] text-white font-black text-xs flex items-center gap-1 whitespace-nowrap hover:bg-black">
-                  <Zap className="w-3.5 h-3.5" /> Fund
-                </button>
+            {/* TAB 2: SHARE & QR */}
+            {manageTab === 'share' && (
+              <div className="space-y-3 animate-in fade-in">
+                <div className="p-3 bg-[#F4F4F6] rounded-xl flex items-center justify-between gap-3 border border-neutral-200">
+                  <div className="truncate">
+                    <p className="text-[10px] font-bold text-[#121417]/60 uppercase">Full Event Link</p>
+                    <p className="text-xs font-mono truncate">{getShareLink(activeEvent)}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setShowQrFor(showQrFor === 'event' ? null : 'event')} className="text-[10px] font-black text-[#121417] bg-white border px-2 py-1 rounded-lg hover:bg-neutral-100">
+                      {showQrFor === 'event' ? 'Hide QR' : 'Show QR'}
+                    </button>
+                    <button onClick={() => handleCopy(getShareLink(activeEvent))} className="p-2 bg-white rounded-lg border shadow-xs">
+                      {copiedLink === getShareLink(activeEvent) ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {showQrFor === 'event' && (
+                  <div className="p-4 bg-white rounded-2xl border-2 border-[#121417] flex flex-col items-center justify-center gap-2 animate-in fade-in zoom-in-95 shadow-retro-sm">
+                    <QRCodeSVG value={getShareLink(activeEvent)} size={190} />
+                    <p className="text-[10px] font-black text-[#121417]/60 uppercase tracking-widest mt-1">Scan to Join Live Event</p>
+                  </div>
+                )}
+
+                <h5 className="font-black text-xs text-[#121417]/80 uppercase tracking-wider pt-2">Direct Quiz Links & QR</h5>
+                <div className="space-y-2">
+                  {activeEvent.tasks.map((task, i) => {
+                    const link = getShareLink(activeEvent, task.id)
+                    return (
+                      <div key={task.id} className="space-y-2">
+                        <div className="p-2.5 bg-[#F4F4F6] rounded-xl flex items-center justify-between gap-2 border border-neutral-200">
+                          <div className="truncate flex-1">
+                            <span className="text-[9px] font-bold text-[#121417]/60 uppercase">Quiz {i+1}</span>
+                            <p className="text-xs font-bold truncate">{task.title}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button onClick={() => setShowQrFor(showQrFor === task.id ? null : task.id)} className="text-[10px] font-black text-[#121417] bg-white border px-2 py-1 rounded hover:bg-neutral-100">
+                              {showQrFor === task.id ? 'Hide' : 'QR'}
+                            </button>
+                            <button onClick={() => handleCopy(link)} className="p-1.5 bg-white rounded border shadow-xs">
+                              {copiedLink === link ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                        {showQrFor === task.id && (
+                          <div className="p-3 bg-white rounded-xl border flex flex-col items-center gap-1.5 animate-in fade-in zoom-in-95">
+                            <QRCodeSVG value={link} size={140} />
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{task.title}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* TAB 3: PAYOUTS & FUND */}
+            {manageTab === 'payouts' && (
+              <div className="space-y-4 animate-in fade-in">
+                {/* Batch Airdrop */}
+                <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-sm text-purple-950">Batch Airdrop Rewards</h4>
+                      <p className="text-[10px] font-bold text-purple-700">Distribute NIM to pending winners from your wallet.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleAirdrop} 
+                    disabled={isAirdropping}
+                    className="w-full py-3 rounded-xl bg-purple-600 text-white font-black text-xs uppercase hover:bg-purple-700 disabled:opacity-50 transition-all shadow-retro-sm"
+                  >
+                    {isAirdropping ? 'Processing Transactions...' : 'Airdrop to Winners Now'}
+                  </button>
+                  {airdropMsg && <p className="text-xs font-bold text-purple-800 text-center">{airdropMsg}</p>}
+                </div>
+
+                {/* Fund More */}
+                <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl space-y-3">
+                  <h4 className="font-black text-sm text-[#121417]">Fund Prize Pool (Nimiq Pay)</h4>
+                  <div className="flex gap-2">
+                    <input type="number" placeholder="Amount in NIM" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className={softInputCls} />
+                    <button onClick={() => {onFundPool(Number(fundAmount) || 0); setFundAmount('');}} className="px-5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase flex items-center gap-1.5 whitespace-nowrap hover:bg-black shadow-retro-sm">
+                      <Zap className="w-3.5 h-3.5" /> Fund
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
           </div>
         )}
 
-      </div>
+        </div> {/* Closes scrollable body */}
+      </div> {/* Closes bottom sheet relative box */}
+
 
       {showPromptInfo && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">

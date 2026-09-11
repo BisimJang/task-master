@@ -1,18 +1,29 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap, QrCode, Scan, Mic2, Settings, ArrowLeft } from 'lucide-react'
+import { Sparkles, Zap, Mic2, Settings, ArrowLeft, Wallet } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
 import { CollapsiblePlatformHero } from './components/CollapsiblePlatformHero'
+import { WalletConnectModal } from './components/WalletConnectModal'
+import { StageQrPortal } from './components/StageQrPortal'
 import type { StageEvent, AttendeeClaimRecord } from './lib/types'
 import { getEvents, saveEvent, getClaims, saveClaim, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
-import { initNimiqProvider, type NimiqProviderInstance } from './lib/nimiq'
+import { initNimiqProvider, requestNimiqAccount, type NimiqProviderInstance } from './lib/nimiq'
 
-function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, claims }: {
+function SettingsPanel({ 
+  nimiqAddress, 
+  isInsideNimiqPay, 
+  totalEarned, 
+  claims,
+  onConnect,
+  onDisconnect,
+}: {
   nimiqAddress: string | null
   isInsideNimiqPay: boolean
   totalEarned: number
   claims: AttendeeClaimRecord[]
+  onConnect: () => void
+  onDisconnect: () => void
 }) {
   const joinedCount = new Set(claims.filter(c => c.walletAddress && c.walletAddress === nimiqAddress).map(c => c.eventId)).size
 
@@ -20,14 +31,39 @@ function SettingsPanel({ nimiqAddress, isInsideNimiqPay, totalEarned, claims }: 
     <div className="space-y-4 pt-4 pb-28">
       {/* Wallet Card */}
       <div className="bg-[#121417] rounded-3xl p-5 text-white">
-        <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">Your Wallet</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/50">Your Wallet</p>
+          {nimiqAddress && (
+            <button 
+              onClick={onDisconnect}
+              className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase cursor-pointer"
+            >
+              Disconnect
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 mb-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className={`w-2.5 h-2.5 rounded-full ${nimiqAddress ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-500'}`} />
           <span className="text-[10px] font-bold text-white/60">
-            {isInsideNimiqPay ? 'Connected via Nimiq Pay' : 'Browser Test Wallet'}
+            {nimiqAddress ? (isInsideNimiqPay ? 'Connected via Nimiq Pay' : 'Wallet Connected') : 'Not Connected'}
           </span>
         </div>
-        <p className="font-mono text-xs break-all text-[#FBD023]">{nimiqAddress || 'Not connected'}</p>
+
+        {nimiqAddress ? (
+          <p className="font-mono text-xs break-all text-[#FBD023] select-all">{nimiqAddress}</p>
+        ) : (
+          <div className="py-2">
+            <button
+              onClick={onConnect}
+              className="w-full py-2.5 px-4 bg-[#FBD023] hover:bg-[#ebd52a] text-[#121417] font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Connect Nimiq Wallet</span>
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
           <span className="text-xs font-black text-white/60">Total Earned</span>
           <span className="font-black text-xl text-[#FBD023]">{totalEarned} NIM</span>
@@ -76,6 +112,27 @@ function App() {
   const [deviceId, setDeviceId] = useState<string>('')
   const [isInsideNimiqPay, setIsInsideNimiqPay] = useState(false)
   const [nimiqProvider, setNimiqProvider] = useState<NimiqProviderInstance | null>(null)
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
+
+  // Starred events
+  const [starredEventIds, setStarredEventIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('eventquest_starred_events')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  const handleToggleStar = (eventId: string) => {
+    setStarredEventIds((prev) => {
+      const next = prev.includes(eventId) ? prev.filter(id => id !== eventId) : [...prev, eventId]
+      try {
+        localStorage.setItem('eventquest_starred_events', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
 
   // Claims
   const [claims, setClaims] = useState<AttendeeClaimRecord[]>([])
@@ -108,20 +165,26 @@ function App() {
 
     // Setup Nimiq & Wallet
     const initNimiq = async () => {
+      // Purge any legacy simulated fake address from previous runs
+      try {
+        localStorage.removeItem('stagedrop_wallet_addr')
+      } catch {}
+
       try {
         const provider = await initNimiqProvider()
         setNimiqProvider(provider)
-        try {
-          if (provider) {
+        if (provider) {
+          try {
+            // Check if accounts already approved by user in session
             const accts = await provider.listAccounts()
             if (Array.isArray(accts) && accts.length > 0) {
               const firstAcct = accts[0] as any
               setNimiqAddress(typeof firstAcct === 'string' ? firstAcct : firstAcct.address)
               setIsInsideNimiqPay(true)
             }
+          } catch {
+            // Awaiting user explicit tap on "Connect Wallet"
           }
-        } catch (e) {
-          console.warn('Could not list accounts', e)
         }
       } catch (err) {
         console.warn('Failed to init Nimiq Provider:', err)
@@ -147,6 +210,30 @@ function App() {
     }
     initNimiq()
   }, [])
+
+  const handleConnectWallet = async () => {
+    try {
+      const { address, provider } = await requestNimiqAccount()
+      if (address) {
+        setNimiqAddress(address)
+        setIsInsideNimiqPay(true)
+        if (provider) setNimiqProvider(provider)
+      } else {
+        setIsWalletModalOpen(true)
+      }
+    } catch (err) {
+      console.warn('Connect error:', err)
+      setIsWalletModalOpen(true)
+    }
+  }
+
+  const handleDisconnectWallet = () => {
+    setNimiqAddress(null)
+    setIsInsideNimiqPay(false)
+    try {
+      localStorage.removeItem('stagedrop_wallet_addr')
+    } catch {}
+  }
 
   // Calc Total Earned
   useEffect(() => {
@@ -303,13 +390,28 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          {nimiqAddress && (
-            <div className="hidden sm:flex bg-white text-[#121417] px-3 py-1.5 rounded-full items-center gap-1.5 shadow-retro-sm border-2 border-[#121417]/10" title="Connected Wallet">
+          {nimiqAddress ? (
+            <button
+              onClick={() => setIsWalletModalOpen(true)}
+              className="flex bg-white text-[#121417] px-3 py-1.5 rounded-full items-center gap-1.5 shadow-retro-xs border-2 border-[#121417] cursor-pointer hover:bg-neutral-50"
+              title="Wallet Details"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="font-mono text-[10px] font-bold">{nimiqAddress.slice(0, 9)}...{nimiqAddress.slice(-4)}</span>
-            </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleConnectWallet}
+              className="flex items-center gap-1.5 bg-[#FBD023] hover:bg-[#ebd52a] text-[#121417] px-3 py-1.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase tracking-wider shadow-retro-xs hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              <span>Connect</span>
+            </button>
           )}
-          <div className="bg-[#121417] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border-2 border-transparent hover:border-[#FBD023] transition-colors shadow-retro-sm cursor-pointer">
+          <div 
+            onClick={() => setActiveTab('terminal')}
+            className="bg-[#121417] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border-2 border-transparent hover:border-[#FBD023] transition-colors shadow-retro-sm cursor-pointer"
+          >
             <Sparkles className="w-3.5 h-3.5 text-[#FBD023]" />
             <span className="font-black text-xs">{totalEarned} NIM</span>
           </div>
@@ -364,15 +466,22 @@ function App() {
             <span className="text-[9px] font-black uppercase tracking-widest">Rewards</span>
           </button>
 
-          {/* Settings (shows wallet address pill) */}
+          {/* Settings / Wallet */}
           <button
             onClick={() => setActiveTab('settings')}
             className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all ${
               activeTab === 'settings' ? 'text-[#121417]' : 'text-[#121417]/40'
             }`}
           >
-            <Settings className={`w-5 h-5 ${activeTab === 'settings' ? 'text-[#121417]' : ''}`} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Settings</span>
+            <div className="relative">
+              <Settings className={`w-5 h-5 ${activeTab === 'settings' ? 'text-[#121417]' : ''}`} />
+              {nimiqAddress && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 absolute -top-0.5 -right-0.5" />
+              )}
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest">
+              {nimiqAddress ? 'Wallet' : 'Settings'}
+            </span>
           </button>
         </div>
       </div>
@@ -393,35 +502,19 @@ function App() {
                 earnedPerTask={earnedPerTask}
                 onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
                 onBack={handleGoHome}
+                isStarred={starredEventIds.includes(currentEvent.id)}
+                onToggleStar={() => handleToggleStar(currentEvent.id)}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95">
-                <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
-                  <QrCode className="w-10 h-10 text-[#121417]" />
-                </div>
-                <h2 className="font-display font-black text-3xl tracking-tight text-[#121417] mb-3">
-                  Join a Live Event
-                </h2>
-                <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm">
-                  Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
-                </p>
-                
-                <div className="flex flex-col gap-3 w-full max-w-md mx-auto">
-                  <button 
-                    onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
-                    className="w-full py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-                  >
-                    <Scan className="w-5 h-5" /> Scan QR Code
-                  </button>
-                  
-                  <button 
-                    onClick={() => setIsCreatorModalOpen(true)}
-                    className="w-full py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-                  >
-                    <Mic2 className="w-5 h-5" /> Host an Event
-                  </button>
-                </div>
-              </div>
+              <StageQrPortal
+                events={events}
+                starredEventIds={starredEventIds}
+                onToggleStar={handleToggleStar}
+                onSelectEvent={handleSelectEvent}
+                onOpenCreator={() => setIsCreatorModalOpen(true)}
+                nimiqAddress={nimiqAddress}
+                onConnectWallet={handleConnectWallet}
+              />
             )
           ) : activeTab === 'terminal' ? (
             <AudienceTerminalSection 
@@ -439,7 +532,9 @@ function App() {
               nimiqAddress={nimiqAddress} 
               isInsideNimiqPay={isInsideNimiqPay} 
               totalEarned={totalEarned} 
-              claims={claims} 
+              claims={claims}
+              onConnect={handleConnectWallet}
+              onDisconnect={handleDisconnectWallet}
             />
           )}
         </div>
@@ -450,11 +545,13 @@ function App() {
             <div className="grid grid-cols-[1.5fr_1fr] gap-6 items-start">
               <div className="sticky top-24">
                 <LiveSessionsSection 
-                  event={currentEvent}
+                  event={currentEvent} 
                   onTaskComplete={handleTaskComplete}
                   earnedPerTask={earnedPerTask}
                   onOpenCreatorMenu={isCreator ? () => setIsCreatorModalOpen(true) : undefined}
                   onBack={handleGoHome}
+                  isStarred={starredEventIds.includes(currentEvent.id)}
+                  onToggleStar={() => handleToggleStar(currentEvent.id)}
                 />
               </div>
               <div className="sticky top-24">
@@ -471,37 +568,30 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 mt-6 text-center animate-in fade-in zoom-in-95">
-              <div className="w-20 h-20 bg-white border-2 border-[#121417] rounded-3xl mb-6 flex items-center justify-center shadow-retro-sm">
-                <QrCode className="w-10 h-10 text-[#121417]" />
-              </div>
-              <h2 className="font-display font-black text-3xl sm:text-4xl tracking-tight text-[#121417] mb-3">
-                Join a Live Event
-              </h2>
-              <p className="text-[#121417]/70 font-bold max-w-md mx-auto mb-8 text-sm sm:text-base">
-                Ready to earn NIM? Ask your host for the event link, or scan their QR code to enter the live stage.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md mx-auto">
-                <button 
-                  onClick={() => alert("In the Nimiq Pay app, use the built-in QR scanner to join an event!")}
-                  className="flex-1 py-4 px-4 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-                >
-                  <Scan className="w-5 h-5" /> Scan QR Code
-                </button>
-                
-                <button 
-                  onClick={() => setIsCreatorModalOpen(true)}
-                  className="flex-1 py-4 px-4 bg-white border-2 border-[#121417] rounded-xl font-black text-xs sm:text-sm uppercase shadow-retro-sm hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2"
-                >
-                  <Mic2 className="w-5 h-5" /> Host an Event
-                </button>
-              </div>
-            </div>
+            <StageQrPortal
+              events={events}
+              starredEventIds={starredEventIds}
+              onToggleStar={handleToggleStar}
+              onSelectEvent={handleSelectEvent}
+              onOpenCreator={() => setIsCreatorModalOpen(true)}
+              nimiqAddress={nimiqAddress}
+              onConnectWallet={handleConnectWallet}
+            />
           )}
         </div>
 
       </main>
+
+      {/* WALLET CONNECT / DETAILS MODAL */}
+      <WalletConnectModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        nimiqAddress={nimiqAddress}
+        isInsideNimiqPay={isInsideNimiqPay}
+        totalEarned={totalEarned}
+        onConnect={handleConnectWallet}
+        onDisconnect={handleDisconnectWallet}
+      />
 
       {isCreatorModalOpen && (
         <CreatorUtilityModal 

@@ -40,12 +40,20 @@ export async function initNimiqProvider(): Promise<NimiqProviderInstance | null>
   if (nimiqInstance) return nimiqInstance
 
   try {
-    nimiqInstance = await init({ timeout: 3000 })
+    nimiqInstance = await init({ timeout: 8000 })
     return nimiqInstance
   } catch (error) {
-    console.warn('Running outside Nimiq Pay or provider timeout, using browser simulation mode:', error)
+    console.warn('Running outside Nimiq Pay or provider timeout:', error)
     return null
   }
+}
+
+/**
+ * Check if the runtime is inside Nimiq Pay environment
+ */
+export function isNimiqPayAvailable(): boolean {
+  const win = window as unknown as { nimiqPay?: unknown; nimiq?: unknown; ethereum?: unknown }
+  return Boolean(win.nimiqPay || win.nimiq)
 }
 
 /**
@@ -58,10 +66,9 @@ export async function getDeviceIdentifier(reason: string = 'Anti-sybil verificat
       if (typeof id === 'string') return id
     }
   } catch (err) {
-    console.warn('Native device identifier not available, falling back to client identifier:', err)
+    console.warn('Native device identifier not available, using client identifier:', err)
   }
 
-  // Fallback for browser testing
   let localId = localStorage.getItem('stagedrop_device_id')
   if (!localId) {
     localId = 'dev_' + Array.from(crypto.getRandomValues(new Uint8Array(20)))
@@ -81,31 +88,47 @@ export function getNimiqLanguage(): string {
 }
 
 /**
- * Connect Nimiq Account
+ * Request real account access from Nimiq Pay native provider
+ */
+export async function requestNimiqAccount(): Promise<{ address: string | null; provider: NimiqProviderInstance | null }> {
+  try {
+    const provider = await initNimiqProvider()
+    if (provider) {
+      const accounts = await provider.listAccounts()
+      if (Array.isArray(accounts) && accounts.length > 0) {
+        const first = accounts[0] as any
+        const addr = typeof first === 'string' ? first : first.address
+        return { address: addr, provider }
+      }
+    }
+  } catch (err) {
+    console.warn('User rejected or provider failed to list accounts:', err)
+  }
+  return { address: null, provider: null }
+}
+
+/**
+ * Connect Nimiq Account (No fake fallback)
  */
 export async function connectNimiqAccount(provider: NimiqProviderInstance | null): Promise<string | null> {
+  // Purge any legacy simulated address from previous runs
+  try {
+    localStorage.removeItem('stagedrop_wallet_addr')
+  } catch {}
+
   if (provider) {
     try {
       const accounts = await provider.listAccounts()
       if (Array.isArray(accounts) && accounts.length > 0) {
-        return accounts[0]
+        const first = accounts[0] as any
+        return typeof first === 'string' ? first : first.address
       }
     } catch (err) {
       console.error('Failed to list Nimiq accounts:', err)
     }
   }
 
-  // Web browser fallback: generate a clean, random client-side Nimiq address
-  let localAddr = localStorage.getItem('stagedrop_wallet_addr')
-  if (!localAddr) {
-    const rand = new Uint8Array(20)
-    crypto.getRandomValues(rand)
-    const hex = Array.from(rand).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()
-    const check = Math.floor(10 + Math.random() * 89)
-    localAddr = `NQ${check} ${hex.slice(0, 4)} ${hex.slice(4, 8)} ${hex.slice(8, 12)} ${hex.slice(12, 16)} ${hex.slice(16, 20)} ${hex.slice(20, 24)} ${hex.slice(24, 28)} ${hex.slice(28, 32)}`
-    localStorage.setItem('stagedrop_wallet_addr', localAddr)
-  }
-  return localAddr
+  return null
 }
 
 /**

@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import {
   Radio, Users, AlertCircle, CheckCircle2, Plus, Lock,
-  Share2, FileText, Globe, Gamepad2, Wrench, ExternalLink, HelpCircle, Flame, ArrowLeft
+  Share2, FileText, Globe, Gamepad2, Wrench, ExternalLink, HelpCircle, Flame, ArrowLeft, Star, QrCode
 } from 'lucide-react'
+// @ts-ignore
+import { QRCodeSVG } from 'qrcode.react'
 import type { StageEvent, SessionTask } from '../lib/types'
 
 interface LiveSessionsSectionProps {
@@ -11,6 +13,8 @@ interface LiveSessionsSectionProps {
   earnedPerTask: Record<string, boolean>
   onOpenCreatorMenu?: () => void
   onBack?: () => void
+  isStarred?: boolean
+  onToggleStar?: () => void
 }
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -188,7 +192,11 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
   earnedPerTask,
   onOpenCreatorMenu,
   onBack,
+  isStarred,
+  onToggleStar,
 }) => {
+  const [showQrModal, setShowQrModal] = useState(false)
+
   if (!event) {
     return (
       <div className="bg-white border-3 border-dashed border-[#121417]/20 rounded-[32px] p-6 flex flex-col items-center justify-center h-full select-none min-h-[420px] gap-5">
@@ -212,12 +220,13 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
   // Parse URL to check if a specific task is targeted
   const searchParams = new URLSearchParams(window.location.search)
   const targetedTaskId = searchParams.get('task')
+  const eventUrl = typeof window !== 'undefined' ? `${window.location.origin}?event=${event.slug}` : ''
   
   // If targeted task exists, we can hoist it or just highlight it. For now, we'll just render all tasks.
   const tasksToRender = event.tasks || []
 
   return (
-    <div className="bg-white border-3 border-[#121417] rounded-[32px] p-6 shadow-retro flex flex-col justify-between h-full select-none min-h-[420px]">
+    <div className="bg-white border-3 border-[#121417] rounded-[32px] p-6 shadow-retro flex flex-col justify-between h-full select-none min-h-[420px] relative">
       <div>
         {/* Event Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-4">
@@ -232,18 +241,67 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
               </button>
             )}
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Stage Event</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Stage Event</span>
+                {onToggleStar && (
+                  <button
+                    onClick={onToggleStar}
+                    className={`p-1 rounded-md border transition-colors cursor-pointer ${
+                      isStarred ? 'bg-[#FBD023] border-[#121417] text-[#121417]' : 'bg-neutral-100 border-neutral-200 text-neutral-400 hover:text-neutral-700'
+                    }`}
+                    title={isStarred ? 'Starred' : 'Star this stage'}
+                  >
+                    <Star className={`w-3 h-3 ${isStarred ? 'fill-[#121417]' : ''}`} />
+                  </button>
+                )}
+              </div>
               <h2 className="font-display font-black text-xl text-[#121417] tracking-tight">{event.title}</h2>
               {event.organizer && <span className="text-xs text-[#121417]/60 font-medium">{event.organizer}</span>}
             </div>
           </div>
-          {onOpenCreatorMenu && (
-            <button onClick={onOpenCreatorMenu}
-              className="px-3 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-[#121417] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors">
-              <Plus className="w-3 h-3" /><span>Manage Tasks</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowQrModal(true)}
+              className="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[#121417] border border-neutral-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+              title="Show Event QR Code"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">QR Code</span>
             </button>
-          )}
+            {onOpenCreatorMenu && (
+              <button onClick={onOpenCreatorMenu}
+                className="px-3 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[#121417] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors">
+                <Plus className="w-3 h-3" /><span>Manage</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* QR Code Popup Modal */}
+        {showQrModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white border-3 border-[#121417] rounded-3xl p-6 shadow-retro max-w-sm w-full text-center space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="font-black text-xs uppercase tracking-wider text-[#FF532F]">Stage QR Code</span>
+                <button onClick={() => setShowQrModal(false)} className="font-bold text-sm text-[#121417]/60 hover:text-black cursor-pointer">✕</button>
+              </div>
+              <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl flex flex-col items-center justify-center shadow-xs">
+                <QRCodeSVG value={eventUrl} size={180} level="M" />
+                <p className="font-display font-black text-sm text-[#121417] mt-3">{event.title}</p>
+                <p className="text-[10px] text-[#121417]/60 font-medium">Scan to open on Nimiq Pay</p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(eventUrl)
+                  alert('Event link copied!')
+                }}
+                className="w-full py-2.5 bg-[#FBD023] border-2 border-[#121417] rounded-xl font-black text-xs uppercase tracking-wider shadow-retro-sm cursor-pointer"
+              >
+                Copy Event Link
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tasks List */}
         <div className="mt-4 space-y-4">
