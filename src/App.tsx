@@ -7,7 +7,7 @@ import { CollapsiblePlatformHero } from './components/CollapsiblePlatformHero'
 import { WalletConnectModal } from './components/WalletConnectModal'
 import { StageQrPortal } from './components/StageQrPortal'
 import type { StageEvent, AttendeeClaimRecord } from './lib/types'
-import { getEvents, saveEvent, getClaims, saveClaim, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
+import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
 import { initNimiqProvider, requestNimiqAccount, type NimiqProviderInstance } from './lib/nimiq'
 
 function SettingsPanel({ 
@@ -298,6 +298,17 @@ function App() {
     }
     
     await saveClaim(claimRecord)
+    await createPayout({
+      id: 'payout-' + claimRecord.id,
+      claimId: claimRecord.id,
+      eventId: claimRecord.eventId,
+      taskId: claimRecord.taskId,
+      recipientAddress: claimRecord.walletAddress,
+      amountLuna: Math.round(claimRecord.amountNIM * 100000),
+      status: 'pending',
+      txHash: null,
+      createdAt: claimRecord.claimedAt,
+    })
     setClaims([...claims, claimRecord])
   }
 
@@ -325,17 +336,33 @@ function App() {
     window.history.replaceState({}, '', `?event=${event.slug}`)
   }
 
-  const handleFundPool = (amount: number) => {
-    if (!currentEvent) return
-    console.log('Funding pool via Nimiq Pay:', amount)
-    alert(`Triggering Nimiq Pay transaction for ${amount} NIM to fund the pool...`)
-    
-    // Simulate updating pool
-    const updatedEvent = {
-      ...currentEvent,
-      totalPoolNIM: currentEvent.totalPoolNIM + amount
+  const handleFundPool = async (amount: number): Promise<{ success: boolean; message: string }> => {
+    if (!currentEvent) return { success: false, message: 'Select an event first.' }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { success: false, message: 'Enter a positive NIM amount.' }
     }
-    handleUpdateEvent(updatedEvent)
+    if (!nimiqAddress || !nimiqProvider) {
+      return { success: false, message: 'Open EventQuest in Nimiq Pay and connect the creator wallet first.' }
+    }
+
+    const requiredBudget = currentEvent.tasks.reduce(
+      (sum, task) => sum + task.rewardNIM * task.maxWinners,
+      0,
+    )
+    const nextBudget = currentEvent.totalPoolNIM + amount
+    if (nextBudget < requiredBudget) {
+      return {
+        success: false,
+        message: `Budget saved only on paper: add at least ${requiredBudget - nextBudget} more NIM for configured winners.`,
+      }
+    }
+
+    const updatedEvent = { ...currentEvent, totalPoolNIM: nextBudget }
+    await handleUpdateEvent(updatedEvent)
+    return {
+      success: true,
+      message: `Payout budget set to ${nextBudget} NIM. Actual payouts are approved from this wallet in Airdrop & Pool.`,
+    }
   }
 
   const handleClearAllData = () => {

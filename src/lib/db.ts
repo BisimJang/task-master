@@ -1,4 +1,4 @@
-import type { StageEvent, AttendeeClaimRecord } from './types'
+import type { StageEvent, AttendeeClaimRecord, PayoutRecord, PayoutStatus } from './types'
 import { supabase } from './supabase'
 
 export async function getEvents(): Promise<StageEvent[]> {
@@ -32,6 +32,50 @@ export async function saveClaim(claim: AttendeeClaimRecord): Promise<void> {
 export async function updateClaimTxHash(claimId: string, txHash: string): Promise<void> {
   const { error } = await supabase.from('claims').update({ txHash }).eq('id', claimId)
   if (error) console.error('Error updating claim txHash:', error)
+}
+
+export async function createPayout(payout: PayoutRecord): Promise<boolean> {
+  const { error } = await supabase.from('payouts').insert(payout)
+  if (error) {
+    console.error('Error creating payout:', error)
+    return false
+  }
+  return true
+}
+
+export async function getPendingPayouts(eventId: string): Promise<PayoutRecord[]> {
+  const { data, error } = await supabase
+    .from('payouts')
+    .select('*')
+    .eq('eventId', eventId)
+    .in('status', ['pending', 'failed'])
+    .order('createdAt', { ascending: true })
+  if (error) {
+    console.error('Error fetching payouts:', error)
+    return []
+  }
+  return (data || []) as PayoutRecord[]
+}
+
+export async function updatePayout(
+  payoutId: string,
+  status: PayoutStatus,
+  details: { txHash?: string; failureMessage?: string } = {},
+): Promise<boolean> {
+  const now = new Date().toISOString()
+  const update: Record<string, string> = { status }
+  if (status === 'submitted') update.submittedAt = now
+  if (details.txHash) {
+    update.txHash = details.txHash
+    if (status === 'confirmed') update.confirmedAt = now
+  }
+  if (details.failureMessage) update.failureMessage = details.failureMessage
+  const { error } = await supabase.from('payouts').update(update).eq('id', payoutId)
+  if (error) {
+    console.error('Error updating payout:', error)
+    return false
+  }
+  return true
 }
 
 export async function hasClaimedTask(eventId: string, taskId: string, walletAddress: string, deviceId: string): Promise<boolean> {

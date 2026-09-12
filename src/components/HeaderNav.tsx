@@ -29,10 +29,10 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         </div>
         <div className="flex flex-col">
           <span className="font-display font-black text-2xl tracking-tighter text-[#121417]">
-            STAGEDROP<span className="text-[#FF532F]">.</span>
+            EVENTQUEST<span className="text-[#FF532F]">.</span>
           </span>
           <span className="text-[10px] font-bold tracking-widest text-[#121417]/60 -mt-1 uppercase">
-            Live Panel Session Drops
+            Live tasks and instant rewards
           </span>
         </div>
       </div>

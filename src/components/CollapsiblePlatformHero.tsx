@@ -28,10 +28,10 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FF532F] animate-pulse" />
             <span className="font-display font-black text-xs sm:text-sm text-[#121417]">
-              STAGEDROP: Live Audience Engagement & Panel Rewards
+              EVENTQUEST: Live tasks and instant rewards
             </span>
             <span className="hidden md:inline text-[11px] font-bold text-[#121417]/60">
-              • Drop questions after talks & reward attendees with real NIM
+              • Join a stage, complete a task, earn NIM
             </span>
           </div>
 
@@ -39,7 +39,7 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
             onClick={() => setIsCollapsed(false)}
             className="flex items-center gap-1.5 text-xs font-bold text-[#121417] hover:text-[#FF532F] bg-neutral-100 hover:bg-neutral-200 px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
           >
-            <span>Expand Platform Overview</span>
+            <span>How rewards work</span>
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -56,10 +56,10 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
             <div className="flex items-center gap-2.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-white bg-[#121417] px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
                 <Mic2 className="w-3 h-3 text-[#FBD023]" />
-                <span>Nimiq Pay Stage Platform</span>
+                <span>EventQuest live stages</span>
               </span>
               <span className="text-xs font-bold text-[#121417]/80 hidden sm:inline">
-                Agnostic Audience Reward & Micro-Drop Engine for Live Conferences
+                Join live tasks and claim your reward in Nimiq Pay
               </span>
             </div>
 
@@ -68,7 +68,7 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
               className="flex items-center gap-1.5 text-xs font-black text-[#121417] bg-white/70 hover:bg-white px-3.5 py-1.5 rounded-full border border-[#121417]/20 transition-all cursor-pointer shadow-xs"
               title="Collapse Platform Overview"
             >
-              <span>Collapse Header</span>
+              <span>Hide details</span>
               <ChevronUp className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -82,26 +82,25 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
               </div>
 
               <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#121417] tracking-tight leading-[1.1]">
-                Turn Conference Panels into{' '}
+                Join the live stage and{' '}
                 <span className="text-[#FF532F] underline decoration-4 decoration-[#121417]">
-                  Live Reward Sessions
+                  earn your reward
                 </span>
               </h1>
 
               <p className="text-sm sm:text-base text-[#121417]/85 font-medium leading-relaxed mt-3 max-w-3xl">
-                Host a quiz at your next event, drop it live to every phone in the room, and automatically pay out real NIM to whoever gets it right first — no apps to download, no gas fees, just instant rewards straight to the wallet.
+                Scan the event QR code, answer the next task, and see your NIM reward immediately. No separate app download is needed.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <a
-                  href="?host=1"
-                  onClick={e => { e.preventDefault(); document.querySelector<HTMLButtonElement>('[data-open-creator]')?.click() }}
+                  href="#stage-portal"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#121417] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro hover:translate-y-[2px] hover:shadow-retro-sm transition-all"
                 >
-                  <Mic2 className="w-5 h-5" /> Host an Event
+                  <Zap className="w-5 h-5" /> See my starred stages
                 </a>
                 <div className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/80 border-2 border-[#121417] rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro-sm">
-                  <Smartphone className="w-5 h-5" /> Open in Nimiq Pay to Join
+                  <Smartphone className="w-5 h-5" /> Open Nimiq Pay to claim
                 </div>
               </div>
             </div>
@@ -121,15 +120,15 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
                   </span>
                 </div>
                 <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  Define Panels & Bounties
+                  1. Join the stage
                 </h3>
                 <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  Creators use the <strong>+ Creator Hub</strong> to organize panel sessions, add questions based on the talk, and assign custom NIM rewards per question.
+                  Scan a host QR code or enter an event link to see the live tasks for this stage.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-[#FF532F]">
                 <Coins className="w-3.5 h-3.5" />
-                <span>Custom NIM Reward Per Question</span>
+                <span>Find your next task</span>
               </div>
             </div>
 
@@ -145,15 +144,15 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
                   </span>
                 </div>
                 <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  Trigger Live Stage Drop
+                  2. Complete a task
                 </h3>
                 <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  When panelists conclude their talk on stage, the host taps <strong>"Drop Questions Live ⚡"</strong>. The session questions unlock instantly on audience phones.
+                  Answer a quiz or complete the action shown on your phone while there are still spots available.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-[#121417]">
                 <Zap className="w-3.5 h-3.5 text-[#FF532F]" />
-                <span>Real-Time Stage Synchronization</span>
+                <span>Live availability</span>
               </div>
             </div>
 
@@ -169,15 +168,15 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
                   </span>
                 </div>
                 <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  Feeless On-Chain Claim
+                  3. Claim your NIM
                 </h3>
                 <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  Attendees answer the questions, unlock their earnings, and claim directly to their Nimiq Pay address via non-custodial one-use gift vaults.
+                  Connect your Nimiq wallet when you are ready, then claim the reward earned from this stage.
                 </p>
               </div>
               <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>1-Second Confirmation (0 Gas)</span>
+                <span>Clear reward status</span>
               </div>
             </div>
           </div>
@@ -186,22 +185,22 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
           <div className="mt-5 pt-4 border-t border-[#121417]/15 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#121417]">
             <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
               <Zap className="w-4 h-4 text-[#FF532F]" />
-              <span>1-Second Albatross Finality</span>
+              <span>Fast confirmation</span>
             </div>
 
             <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
-              <span>Anti-Sybil Hardware Device Lock</span>
+              <span>One reward per device</span>
             </div>
 
             <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
               <Coins className="w-4 h-4 text-[#121417]" />
-              <span>Non-Custodial Gift Vault Architecture</span>
+              <span>Your wallet, your reward</span>
             </div>
 
             <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
               <Smartphone className="w-4 h-4 text-[#FF532F]" />
-              <span>Native Nimiq Pay Mini App</span>
+              <span>Works in Nimiq Pay</span>
             </div>
           </div>
         </div>

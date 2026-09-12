@@ -5,7 +5,7 @@ import {
 import type { StageEvent, SessionTask } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
-import { getClaims, updateClaimTxHash } from '../lib/db'
+import { updateClaimTxHash, getPendingPayouts, updatePayout } from '../lib/db'
 import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
 
 interface CreatorUtilityModalProps {
@@ -17,7 +17,7 @@ interface CreatorUtilityModalProps {
   onSelectEvent: (event: StageEvent) => void
   onCreateEvent: (newEvent: StageEvent) => void
   onUpdateEvent: (updatedEvent: StageEvent) => void
-  onFundPool: (amountNIM: number) => void
+  onFundPool: (amountNIM: number) => Promise<{ success: boolean; message: string }>
   onClearAllData?: () => void
 }
 
@@ -45,6 +45,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   
   const [importMode, setImportMode] = useState<'single' | 'bulk'>('single')
   const [csvData, setCsvData] = useState('')
+  const [bulkPreview, setBulkPreview] = useState<SessionTask[]>([])
+  const [bulkSkipped, setBulkSkipped] = useState(0)
   const [showPromptInfo, setShowPromptInfo] = useState(false)
   const [bulkError, setBulkError] = useState('')
 
@@ -58,6 +60,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
   const [isAirdropping, setIsAirdropping] = useState(false)
   const [airdropMsg, setAirdropMsg] = useState('')
+  const [fundMsg, setFundMsg] = useState('')
   const [manageTab, setManageTab] = useState<'quizzes' | 'share' | 'payouts'>('quizzes')
 
   useEffect(() => {
@@ -140,60 +143,101 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
   const handleBulkCSVImport = () => {
     setBulkError('')
-    if (!csvData.trim()) return
-
-    const lines = csvData.trim().split('\n')
-    const newTasks: SessionTask[] = []
-    let totalCost = 0
-
-    for (let i = 0; i < lines.length; i++) {
-      const parts = lines[i].split(',').map(s => s.trim())
-      if (parts.length < 6) {
-        setBulkError(`Line ${i + 1} is invalid. Needs 6 columns.`)
-        return
-      }
-
-      const [question, optA, optB, optC, correctIdxStr, rewardStr] = parts
-      const reward = Number(rewardStr)
-      const correctIdx = Number(correctIdxStr)
-
-      if (isNaN(reward) || isNaN(correctIdx)) {
-        setBulkError(`Line ${i + 1} has invalid numbers for index or reward.`)
-        return
-      }
-
-      totalCost += (reward * 1) 
-      newTasks.push({
-        id: `task-${Date.now()}-${i}`,
-        type: 'quiz',
-        title: question,
-        description: '',
-        rewardNIM: reward,
-        maxWinners: 1,
-        winnerCount: 0,
-        isLocked: false,
-        options: [optA, optB, optC].filter(Boolean),
-        correctIndex: correctIdx
-      })
-    }
-
-    if (totalCost > remainingPool) {
-      setBulkError(`Insufficient pool! Bulk import costs ${totalCost} NIM, but only ${remainingPool} NIM remains.`)
+    setBulkPreview([])
+    setBulkSkipped(0)
+    if (!csvData.trim()) {
+      setBulkError('Paste CSV rows or choose a CSV file first.')
       return
     }
+    const rows = csvData.trim().split(/\r?\n/).map(line => {
+      const values: string[] = []
+      let value = ''
+      let quoted = false
+      for (const char of line) {
+        if (char === '"') quoted = !quoted
+        else if (char === ',' && !quoted) {
+          values.push(value.trim())
+          value = ''
+        } else value += char
+      }
+      values.push(value.trim())
+      return values.map(item => item.replace(/^"|"$/g, '').trim())
+    })
+    const first = rows[0]?.map(value => value.toLowerCase()) || []
+    const start = first.some(value => value.includes('question') || value.includes('correct')) ? 1 : 0
+    const newTasks: SessionTask[] = []
+    let skipped = 0
+    rows.slice(start).forEach((parts, index) => {
+      if (parts.length < 6 || !parts[0] || !parts[1] || !parts[2]) {
+        skipped++
+        return
+      }
+      const correctValue = parts[4].toUpperCase()
+      const correctIdx = ['A', 'B', 'C'].indexOf(correctValue) >= 0
+        ? ['A', 'B', 'C'].indexOf(correctValue)
+        : Number(parts[4])
+      const reward = Number(parts[5])
+      const winners = Number(parts[6] || 1)
+      if (!Number.isFinite(reward) || reward <= 0 || !Number.isInteger(correctIdx) || correctIdx < 0 || correctIdx > 2 || !Number.isInteger(winners) || winners < 1) {
+        skipped++
+        return
+      }
+      newTasks.push({
+        id: `task-${Date.now()}-${index}`,
+        type: 'quiz',
+        title: parts[0],
+        description: '',
+        rewardNIM: reward,
+        maxWinners: winners,
+        winnerCount: 0,
+        isLocked: false,
+        options: [parts[1], parts[2], parts[3]].filter(Boolean),
+        correctIndex: correctIdx,
+      })
+    })
+    const totalCost = newTasks.reduce((sum, task) => sum + task.rewardNIM * task.maxWinners, 0)
+    if (!newTasks.length) {
+      setBulkError('No valid rows found. Check the format below.')
+      return
+    }
+    if (totalCost > remainingPool) {
+      setBulkError(`These questions require ${totalCost} NIM, but only ${remainingPool} NIM remains.`)
+      setBulkPreview(newTasks)
+      setBulkSkipped(skipped)
+      return
+    }
+    setBulkPreview(newTasks)
+    setBulkSkipped(skipped)
+  }
 
+  const confirmBulkImport = () => {
+    if (!bulkPreview.length) return
     if (viewMode === 'manage' && activeEvent) {
       onUpdateEvent({
         ...activeEvent,
-        tasks: [...activeEvent.tasks, ...newTasks]
+        tasks: [...activeEvent.tasks, ...bulkPreview]
       })
       setIsAddingTaskPostPublish(false)
     } else {
-      setDraftTasks([...draftTasks, ...newTasks])
+      setDraftTasks([...draftTasks, ...bulkPreview])
     }
-
     setCsvData('')
+    setBulkPreview([])
+    setBulkSkipped(0)
     setImportMode('single')
+  }
+
+  const handleCsvFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCsvData(String(reader.result || ''))
+      setBulkError('')
+      setBulkPreview([])
+    }
+    reader.onerror = () => setBulkError('Could not read that file. Try pasting the CSV instead.')
+    reader.readAsText(file)
   }
 
   const handlePublish = () => {
@@ -228,37 +272,53 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
     setAirdropMsg('Fetching pending winners...')
 
     try {
-      const allClaims = await getClaims()
-      const pendingEventClaims = allClaims.filter(c => c.eventId === activeEvent.id && c.txHash === 'pending' && c.walletAddress && c.walletAddress !== 'unlinked')
+      const pendingPayouts = await getPendingPayouts(activeEvent.id)
+      const eligiblePayouts = pendingPayouts.filter(p => p.recipientAddress !== 'unlinked')
 
-      if (pendingEventClaims.length === 0) {
+      if (eligiblePayouts.length === 0) {
         setAirdropMsg('No pending winners found!')
         setTimeout(() => setAirdropMsg(''), 3000)
         setIsAirdropping(false)
         return
       }
 
-      setAirdropMsg(`Airdropping to ${pendingEventClaims.length} winners...`)
+      setAirdropMsg(`Airdropping to ${eligiblePayouts.length} winners...`)
       const provider = await initNimiqProvider()
+      if (!provider) {
+        throw new Error('Open EventQuest in Nimiq Pay to approve payout transactions.')
+      }
 
       let successCount = 0
-      for (const claim of pendingEventClaims) {
+      let failureCount = 0
+      for (const payout of eligiblePayouts) {
         try {
-          const tx = await claimNimiqReward(provider, claim.walletAddress, claim.amountNIM)
+          await updatePayout(payout.id, 'submitted')
+          const tx = await claimNimiqReward(provider, payout.recipientAddress, payout.amountLuna / 100000)
           if (tx) {
-            await updateClaimTxHash(claim.id, tx)
+            await updatePayout(payout.id, 'submitted', { txHash: tx })
+            await updateClaimTxHash(payout.claimId, tx)
             successCount++
+          } else {
+            await updatePayout(payout.id, 'failed', { failureMessage: 'No transaction hash returned.' })
+            failureCount++
           }
         } catch (e) {
-          console.error('Failed to airdrop claim', claim.id, e)
+          const message = e instanceof Error ? e.message : 'Transaction failed.'
+          await updatePayout(payout.id, 'failed', { failureMessage: message })
+          console.error('Failed to airdrop payout', payout.id, e)
+          failureCount++
         }
       }
 
-      setAirdropMsg(`Successfully airdropped to ${successCount} winners!`)
+      setAirdropMsg(
+        failureCount > 0
+          ? `${successCount} submitted. ${failureCount} still pending and safe to retry.`
+          : `Successfully submitted ${successCount} payout${successCount === 1 ? '' : 's'}!`
+      )
       setTimeout(() => setAirdropMsg(''), 4000)
     } catch (err) {
       console.error(err)
-      setAirdropMsg('Airdrop failed. Check console.')
+      setAirdropMsg(err instanceof Error ? err.message : 'Airdrop could not start. No payouts were marked complete.')
       setTimeout(() => setAirdropMsg(''), 3000)
     }
 
@@ -316,27 +376,65 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className={labelCls}>Paste CSV Data (Trivia Only):</label>
+              <label className={labelCls}>Import questions:</label>
               <button type="button" onClick={() => setShowPromptInfo(true)} className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-100">
                 <Info className="w-3 h-3" /> AI Prompt Help
               </button>
             </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <label className="flex-1 cursor-pointer py-2.5 px-3 rounded-xl border-2 border-dashed border-[#121417]/30 text-center text-xs font-black hover:border-[#121417]">
+                <Upload className="w-3.5 h-3.5 inline mr-1.5" /> Choose CSV file
+                <input type="file" accept=".csv,text/csv" onChange={handleCsvFile} className="sr-only" />
+              </label>
+              <span className="self-center text-[10px] font-bold text-[#121417]/50">or paste below</span>
+            </div>
             {bulkError && <div className="text-[10px] font-bold text-red-600 bg-red-50 p-2 rounded">{bulkError}</div>}
             <textarea
-              required
               rows={5}
-              placeholder="Question, OptionA, OptionB, OptionC, CorrectIndex(0,1,2), RewardNIM&#10;What is 2+2?, 3, 4, 5, 1, 10"
+              placeholder="Question, Option A, Option B, Option C, Correct Answer, Reward NIM, Winner Slots&#10;&quot;What is 2+2?&quot;, 3, 4, 5, B, 10, 1"
               value={csvData}
               onChange={e => setCsvData(e.target.value)}
               className={`${softInputCls} font-mono text-[10px]`}
             />
-            <p className="text-[10px] text-[#121417]/50">Format: Question, Option 1, Option 2, Option 3, CorrectIndex, Reward</p>
+            <p className="text-[10px] text-[#121417]/50">Columns: Question, Option A, Option B, Option C, Correct Answer (A/B/C), Reward NIM, Winner Slots. A header row is optional.</p>
+            <button type="button" onClick={handleBulkCSVImport} className="w-full py-2.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase">
+              Preview questions
+            </button>
+            {bulkPreview.length > 0 && (
+              <div className="space-y-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-black text-emerald-900">{bulkPreview.length} questions ready</p>
+                  <p className="text-xs font-black text-emerald-800">
+                    {getUsedPool(bulkPreview)} NIM possible payout
+                  </p>
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1">
+                  {bulkPreview.map((task, index) => (
+                    <div key={task.id} className="text-[10px] font-bold text-emerald-900 flex justify-between gap-2">
+                      <span className="truncate">{index + 1}. {task.title}</span>
+                      <span className="shrink-0">{task.rewardNIM} NIM × {task.maxWinners}</span>
+                    </div>
+                  ))}
+                </div>
+                {bulkSkipped > 0 && <p className="text-[10px] font-bold text-amber-700">{bulkSkipped} row(s) skipped because they were incomplete or invalid.</p>}
+                <button
+                  type="button"
+                  onClick={confirmBulkImport}
+                  disabled={getUsedPool(bulkPreview) > remainingPool}
+                  className="w-full py-2.5 rounded-xl bg-emerald-700 text-white font-black text-xs uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {getUsedPool(bulkPreview) > remainingPool ? 'Increase payout budget to import' : `Import ${bulkPreview.length} questions`}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        <button type="submit" className="w-full py-2.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-black">
-          <Plus className="w-4 h-4" /> {importMode === 'bulk' ? 'Import Tasks' : 'Add Quiz to Event'}
-        </button>
+        {importMode === 'single' && (
+          <button type="submit" className="w-full py-2.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-black">
+            <Plus className="w-4 h-4" /> Add Quiz to Event
+          </button>
+        )}
         
         {viewMode === 'manage' && (
           <button type="button" onClick={() => setIsAddingTaskPostPublish(false)} className="w-full py-2 mt-2 rounded-xl text-xs font-bold text-[#121417]/60 hover:bg-neutral-100">Cancel</button>
@@ -650,7 +748,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-black text-sm text-purple-950">Batch Airdrop Rewards</h4>
-                      <p className="text-[10px] font-bold text-purple-700">Distribute NIM to pending winners from your wallet.</p>
+                      <p className="text-[10px] font-bold text-purple-700">Each payout opens a Nimiq Pay approval. Failed payouts stay pending.</p>
                     </div>
                   </div>
                   <button 
@@ -665,13 +763,25 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
                 {/* Fund More */}
                 <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl space-y-3">
-                  <h4 className="font-black text-sm text-[#121417]">Fund Prize Pool (Nimiq Pay)</h4>
+                  <h4 className="font-black text-sm text-[#121417]">Payout budget</h4>
+                  <p className="text-[10px] font-bold text-[#121417]/60">Payouts are sent from the connected creator wallet. This value is a planning limit, not a separate escrow account.</p>
                   <div className="flex gap-2">
                     <input type="number" placeholder="Amount in NIM" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className={softInputCls} />
-                    <button onClick={() => {onFundPool(Number(fundAmount) || 0); setFundAmount('');}} className="px-5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase flex items-center gap-1.5 whitespace-nowrap hover:bg-black shadow-retro-sm">
-                      <Zap className="w-3.5 h-3.5" /> Fund
-                    </button>
+                  <button onClick={async () => {
+                    const amount = Number(fundAmount)
+                    if (!Number.isFinite(amount) || amount <= 0) {
+                      setFundMsg('Enter a positive NIM amount.')
+                      return
+                    }
+                    setFundMsg('Checking payout budget...')
+                    const result = await onFundPool(amount)
+                    setFundMsg(result.message)
+                    if (result.success) setFundAmount('')
+                  }} className="px-5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase flex items-center gap-1.5 whitespace-nowrap hover:bg-black shadow-retro-sm">
+                    <Zap className="w-3.5 h-3.5" /> Save
+                  </button>
                   </div>
+                  {fundMsg && <p role="status" className="text-xs font-bold text-[#121417]/70">{fundMsg}</p>}
                 </div>
               </div>
             )}
@@ -689,7 +799,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
             <h3 className="font-display font-black text-lg mb-2 text-[#121417]">Generate Trivia with AI</h3>
             <p className="text-xs text-[#121417]/70 mb-4">Copy this prompt and paste it into ChatGPT, Gemini, or Claude to quickly generate bulk trivia questions formatted perfectly for your event.</p>
             <div className="bg-[#F4F4F6] p-3 rounded-xl border border-neutral-300 font-mono text-[10px] text-[#121417] mb-4 select-all">
-              Generate 10 trivia questions about [YOUR TOPIC HERE]. Format the output STRICTLY as raw CSV with no headers, no markdown blocks, and no extra text. Use this exact column format: Question, Option A, Option B, Option C, CorrectOptionIndex (0 for A, 1 for B, 2 for C), RewardAmountNIM. Example row: What is 2+2?, 3, 4, 5, 1, 5
+              Generate 10 trivia questions about [YOUR TOPIC HERE]. Format the output STRICTLY as raw CSV with one header row and no markdown blocks or extra text. Use this exact column format: Question, Option A, Option B, Option C, Correct Answer (A/B/C), Reward NIM, Winner Slots. Quote any field containing a comma. Example row: "What is 2+2?", 3, 4, 5, B, 5, 1
             </div>
             <button onClick={() => setShowPromptInfo(false)} className="w-full py-2 bg-[#121417] text-white font-black text-xs uppercase rounded-xl">Got it</button>
           </div>

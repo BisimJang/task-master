@@ -110,38 +110,16 @@ export async function getBlockchainBlockHeight(): Promise<number> {
 }
 
 /**
- * Signs and broadcasts a real Nimiq transaction from a one-use gift account to the attendee's wallet address
+ * Gift-account signing is not available in the browser-only implementation.
+ * Payouts must go through the connected Nimiq Pay provider instead.
  */
 export async function claimFromGiftAccount(
-  giftAccount: GiftAccount,
-  recipientAddress: string,
-  amountNIM: number
+  _giftAccount: GiftAccount,
+  _recipientAddress: string,
+  _amountNIM: number
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
-  try {
-    const cleanRecipient = recipientAddress.replace(/\s+/g, '')
-    const amountLuna = Math.round(amountNIM * 100000)
-    const blockHeight = await getBlockchainBlockHeight()
-
-    // Transaction identifier derived from gift account signature
-    const txHashPayload = {
-      from: giftAccount.address,
-      to: cleanRecipient,
-      value: amountLuna,
-      blockHeight,
-      timestamp: Date.now(),
-    }
-
-    const enc = new TextEncoder()
-    const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(JSON.stringify(txHashPayload)))
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const txHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-
-    return {
-      success: true,
-      txHash,
-    }
-  } catch (err: any) {
-    console.error('Claim transaction error:', err)
-    return { success: false, error: err?.message || 'Transaction failed' }
+  return {
+    success: false,
+    error: 'Gift-account payouts require a server signer. Use the connected Nimiq Pay payout flow.',
   }
 }

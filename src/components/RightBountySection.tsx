@@ -112,7 +112,7 @@ export const RightBountySection: React.FC<RightBountySectionProps> = ({
 
               {/* Task State Notification */}
               {successNotice && (
-                <div className="mt-3 p-2.5 bg-emerald-600/90 border border-emerald-400 text-white rounded-2xl text-xs font-bold flex items-center gap-2 animate-bounce">
+                <div className="mt-3 p-2.5 bg-emerald-600/90 border border-emerald-400 text-white rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   <CheckCircle className="w-4 h-4 text-white" />
                   <span>{successNotice}</span>
                 </div>

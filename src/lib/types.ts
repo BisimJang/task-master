@@ -41,3 +41,19 @@ export interface AttendeeClaimRecord {
   claimedAt: string
 }
 
+export type PayoutStatus = 'pending' | 'submitted' | 'confirmed' | 'failed'
+
+export interface PayoutRecord {
+  id: string
+  claimId: string
+  eventId: string
+  taskId: string
+  recipientAddress: string
+  amountLuna: number
+  status: PayoutStatus
+  txHash: string | null
+  failureMessage?: string | null
+  submittedAt?: string | null
+  confirmedAt?: string | null
+  createdAt: string
+}

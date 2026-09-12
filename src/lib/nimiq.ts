@@ -167,25 +167,21 @@ export async function claimNimiqReward(
 ): Promise<string> {
   const amountLuna = Math.round(amountNIM * 100000)
 
-  if (provider) {
-    try {
-      const result = await provider.sendBasicTransactionWithData({
-        recipient: recipientAddress,
-        value: amountLuna,
-        data: 'HopDrop Quest Reward'
-      })
-      if (typeof result === 'string') {
-        return result
-      }
-    } catch (err) {
-      console.warn('Native NIM tx cancelled or simulated:', err)
-    }
+  if (!provider) {
+    throw new Error('Open EventQuest in Nimiq Pay to send the payout.')
   }
 
-  // Simulated Tx Hash for verification
-  return 'nim_' + Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
+  const result = await provider.sendBasicTransactionWithData({
+    recipient: recipientAddress,
+    value: amountLuna,
+    data: 'EventQuest reward payout'
+  })
+
+  if (typeof result !== 'string' || !result) {
+    throw new Error('Nimiq Pay did not return a transaction hash.')
+  }
+
+  return result
 }
 
 /**

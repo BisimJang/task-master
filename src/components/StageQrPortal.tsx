@@ -28,7 +28,6 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
   const [stageCodeInput, setStageCodeInput] = useState('')
   const [joinError, setJoinError] = useState('')
 
-  // ONLY show events that the user has starred!
   const starredEvents = events.filter((e) => starredEventIds.includes(e.id))
   const featuredEvent = selectedQrEvent || starredEvents[0] || null
 
@@ -66,7 +65,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
   }
 
   return (
-    <div className="space-y-6 pt-2 pb-24">
+    <div id="stage-portal" className="space-y-6 pt-2 pb-24 scroll-mt-24">
       {/* 1. STARRED STAGES PRESENT ON HOME */}
       {starredEvents.length > 0 ? (
         <div className="space-y-6">
@@ -91,7 +90,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
                 <div className="flex-1 text-center sm:text-left space-y-2">
                   <div className="flex items-center justify-center sm:justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F] bg-white/10 px-2.5 py-0.5 rounded-full">
-                      Starred Stage
+                      Live Stage
                     </span>
                     <button
                       onClick={() => onToggleStar(featuredEvent.id)}
@@ -141,7 +140,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
             </div>
           )}
 
-          {/* List of Starred Stages */}
+          {/* List of available stages */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -156,7 +155,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {starredEvents.map((evt) => (
+            {starredEvents.map((evt) => (
                 <div
                   key={evt.id}
                   className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm flex flex-col justify-between hover:border-[#FF532F] transition-all"
@@ -169,9 +168,9 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
                       <button
                         onClick={() => onToggleStar(evt.id)}
                         className="text-[#FBD023] hover:opacity-75 cursor-pointer p-0.5"
-                        title="Remove from Starred"
+                        title="Remove from saved stages"
                       >
-                        <Star className="w-4 h-4 fill-[#FBD023]" />
+                        <Star className="w-4 h-4 fill-[#FBD023] text-[#FBD023]" />
                       </button>
                     </div>
                     <p className="text-[11px] text-[#121417]/60 font-medium mt-0.5">
@@ -216,7 +215,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
               Scan QR Code to Join
             </h3>
             <p className="text-xs text-[#121417]/70 font-bold leading-relaxed">
-              Use your camera or the Nimiq Pay scanner to enter a stage presentation. Star any stage (⭐) to keep it pinned to your home screen!
+              Use your camera or the Nimiq Pay scanner to enter a stage presentation. Star any stage to keep it pinned to your home screen.
             </p>
           </div>
 
@@ -242,7 +241,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={() => alert('In Nimiq Pay, tap the QR scanner icon to scan the presenter’s stage code!')}
+              onClick={() => setJoinError('Open the QR scanner in Nimiq Pay, then scan the presenter’s stage code.')}
               className="w-full sm:w-auto px-6 py-3 bg-[#FBD023] hover:bg-[#ebd52a] text-[#121417] border-2 border-[#121417] font-black text-xs uppercase tracking-wider rounded-xl shadow-retro-sm hover:translate-y-0.5 hover:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Scan className="w-4 h-4" />
@@ -257,6 +256,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
               <span>Host a Stage</span>
             </button>
           </div>
+          {joinError && <p role="status" className="text-[11px] font-bold text-[#FF532F]">{joinError}</p>}
         </div>
       )}
 
