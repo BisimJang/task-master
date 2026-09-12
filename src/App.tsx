@@ -261,8 +261,27 @@ function App() {
 
   // --- Handlers ---
 
+  function isSameNimiqAddress(a?: string | null, b?: string | null): boolean {
+    if (!a || !b) return false
+    return a.replace(/\s+/g, '').toUpperCase() === b.replace(/\s+/g, '').toUpperCase()
+  }
+
+  // Determine if current user is the creator of the active event
+  const isCreator = Boolean(
+    currentEvent &&
+    currentEvent.creatorAddress &&
+    nimiqAddress &&
+    isSameNimiqAddress(currentEvent.creatorAddress, nimiqAddress)
+  )
+
   const handleTaskComplete = async (taskId: string, _optIdx: number) => {
     if (!currentEvent) return
+
+    // Critical: Creator cannot play or claim their own event!
+    if (isCreator) {
+      alert("As the stage creator, you cannot participate in your own quizzes or win rewards.")
+      return
+    }
 
     const task = currentEvent.tasks.find((x) => x.id === taskId)
     if (!task) return
@@ -348,8 +367,8 @@ function App() {
     window.history.replaceState({}, '', '/')
   }
 
-  const handleClaimSuccess = (txHash: string, amount: number) => {
-     console.log('Claim Success!', txHash, amount)
+  const handleUpdateClaimTxHash = (claimId: string, txHash: string) => {
+    setClaims(prev => prev.map(c => c.id === claimId ? { ...c, txHash } : c))
   }
 
   const handleGoHome = () => {
@@ -357,10 +376,6 @@ function App() {
     setActiveTab('stage')
     window.history.replaceState({}, '', window.location.pathname)
   }
-
-  // Determine if current user is the creator
-  const isCreator = !currentEvent || 
-    (currentEvent.creatorAddress && nimiqAddress && currentEvent.creatorAddress.toLowerCase() === nimiqAddress.toLowerCase())
 
   const handleOpenCreator = () => {
     if (!nimiqAddress) {
@@ -507,6 +522,7 @@ function App() {
             currentEvent ? (
               <LiveSessionsSection 
                 event={currentEvent} 
+                isCreator={isCreator}
                 onTaskComplete={handleTaskComplete}
                 earnedPerTask={earnedPerTask}
                 onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
@@ -528,13 +544,15 @@ function App() {
           ) : activeTab === 'terminal' ? (
             <AudienceTerminalSection 
               event={currentEvent}
+              isCreator={isCreator}
+              claims={claims}
               totalEarnedNIM={totalEarned}
               nimiqAddress={nimiqAddress}
               deviceId={deviceId}
               isInsideNimiqPay={isInsideNimiqPay}
               nimiqProvider={nimiqProvider}
               onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
-              onClaimSuccess={handleClaimSuccess}
+              onUpdateClaimTxHash={handleUpdateClaimTxHash}
             />
           ) : (
             <SettingsPanel 
@@ -555,6 +573,7 @@ function App() {
               <div className="sticky top-24">
                 <LiveSessionsSection 
                   event={currentEvent} 
+                  isCreator={isCreator}
                   onTaskComplete={handleTaskComplete}
                   earnedPerTask={earnedPerTask}
                   onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
@@ -566,13 +585,15 @@ function App() {
               <div className="sticky top-24">
                 <AudienceTerminalSection 
                   event={currentEvent}
+                  isCreator={isCreator}
+                  claims={claims}
                   totalEarnedNIM={totalEarned}
                   nimiqAddress={nimiqAddress}
                   deviceId={deviceId}
                   isInsideNimiqPay={isInsideNimiqPay}
                   nimiqProvider={nimiqProvider}
                   onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
-                  onClaimSuccess={handleClaimSuccess}
+                  onUpdateClaimTxHash={handleUpdateClaimTxHash}
                 />
               </div>
             </div>
