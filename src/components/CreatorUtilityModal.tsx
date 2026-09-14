@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import {
   X, Zap, FolderPlus, Trash2, CheckCircle2, Copy, Plus, Info, Upload
 } from 'lucide-react'
-import type { StageEvent, SessionTask, PayoutRecord } from '../lib/types'
+import type { StageEvent, SessionTask, PayoutRecord, GiveawayEntry } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
-import { updateClaimTxHash, getPendingPayouts, getPayouts, updatePayout } from '../lib/db'
+import { updateClaimTxHash, getPendingPayouts, getPayouts, getGiveawayEntries, updatePayout } from '../lib/db'
 import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
 
 interface CreatorUtilityModalProps {
@@ -32,6 +32,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const [draftDesc, setDraftDesc] = useState('')
   const [draftOrg, setDraftOrg] = useState('')
   const [draftPool, setDraftPool] = useState('')
+  const [draftMode, setDraftMode] = useState<'quiz' | 'giveaway'>('quiz')
+  const [draftGiveawayLimit, setDraftGiveawayLimit] = useState('')
   const [draftTasks, setDraftTasks] = useState<SessionTask[]>([])
 
   const [taskTitle, setTaskTitle] = useState('')
@@ -65,6 +67,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const [payouts, setPayouts] = useState<PayoutRecord[]>([])
   const [payoutsLoading, setPayoutsLoading] = useState(false)
   const [payoutsError, setPayoutsError] = useState('')
+  const [giveawayEntries, setGiveawayEntries] = useState<GiveawayEntry[]>([])
 
   useEffect(() => {
     if (!isOpen) return
@@ -84,6 +87,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       .then(setPayouts)
       .catch(error => setPayoutsError(error instanceof Error ? error.message : 'Could not load completed quizzes.'))
       .finally(() => setPayoutsLoading(false))
+  }, [isOpen, manageTab, activeEvent])
+
+  useEffect(() => {
+    if (!isOpen || manageTab !== 'payouts' || !activeEvent || activeEvent.mode !== 'giveaway') return
+    getGiveawayEntries(activeEvent.id).then(setGiveawayEntries).catch(() => setGiveawayEntries([]))
   }, [isOpen, manageTab, activeEvent])
 
   if (!isOpen) return null
@@ -281,12 +289,14 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       organizer: draftOrg.trim(),
       totalPoolNIM: Number(draftPool) || 0,
       tasks: draftTasks,
+      mode: draftMode,
+      giveawayLimit: draftMode === 'giveaway' && draftGiveawayLimit ? Number(draftGiveawayLimit) : undefined,
       published: true,
       creatorAddress: connectedAddress
     }
     
     onCreateEvent(newEvent)
-    setDraftTitle(''); setDraftDesc(''); setDraftOrg(''); setDraftPool(''); setDraftTasks([])
+    setDraftTitle(''); setDraftDesc(''); setDraftOrg(''); setDraftPool(''); setDraftTasks([]); setDraftMode('quiz'); setDraftGiveawayLimit('')
     setStep(1)
     onSelectEvent(newEvent)
     setViewMode('manage')
@@ -567,7 +577,15 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                 <div><label className={labelCls}>Event Name:</label><input type="text" value={draftTitle} onChange={e => setDraftTitle(e.target.value)} className={inputCls} /></div>
                 <div><label className={labelCls}>Organizer:</label><input type="text" value={draftOrg} onChange={e => setDraftOrg(e.target.value)} className={softInputCls} /></div>
                 <div><label className={labelCls}>Description:</label><textarea rows={2} value={draftDesc} onChange={e => setDraftDesc(e.target.value)} className={`${softInputCls} resize-none`} /></div>
-                <button onClick={() => draftTitle.trim() && setStep(2)} disabled={!draftTitle.trim()} className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Next: Set Prize Pool</button>
+                <div className="p-3 bg-[#F4F4F6] rounded-xl space-y-2">
+                  <label className="text-[11px] font-black uppercase">Format</label>
+                  <select value={draftMode} onChange={e => setDraftMode(e.target.value as 'quiz' | 'giveaway')} className={softInputCls}>
+                    <option value="quiz">Quiz race</option>
+                    <option value="giveaway">Wallet giveaway link</option>
+                  </select>
+                  {draftMode === 'giveaway' && <><p className="text-[10px] text-[#121417]/60">Attendees open a link, connect their Nimiq wallet, and join. You choose winners from the entry list.</p><input type="number" min="1" placeholder="Optional entry limit" value={draftGiveawayLimit} onChange={e => setDraftGiveawayLimit(e.target.value)} className={softInputCls} /></>}
+                </div>
+                {draftMode === 'giveaway' ? <button onClick={handlePublish} disabled={!draftTitle.trim() || !draftPool} className="w-full py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Publish Giveaway Link</button> : <button onClick={() => draftTitle.trim() && setStep(2)} disabled={!draftTitle.trim()} className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Next: Set Prize Pool</button>}
               </div>
             )}
 
@@ -799,6 +817,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                     })}
                   </div>}
                 </div>
+
+                {activeEvent.mode === 'giveaway' && <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between"><div><h4 className="font-black text-sm">Giveaway entries</h4><p className="text-[10px] font-bold text-[#121417]/60">Wallets collected from the giveaway link.</p></div><span className="text-xs font-black">{giveawayEntries.length}</span></div>
+                  {giveawayEntries.length === 0 ? <p className="text-xs font-bold text-[#121417]/60">No wallets have joined yet.</p> : <div className="space-y-1 max-h-40 overflow-y-auto">{giveawayEntries.map(entry => <div key={entry.id} className="flex justify-between p-2 rounded-lg bg-[#F4F4F6] text-[10px] font-bold"><span>{entry.walletAddress.slice(0, 8)}...{entry.walletAddress.slice(-6)}</span><span>{new Date(entry.joinedAt).toLocaleString()}</span></div>)}</div>}
+                </div>}
 
                 {/* Batch Airdrop */}
                 <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
