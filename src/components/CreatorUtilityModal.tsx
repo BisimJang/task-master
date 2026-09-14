@@ -747,8 +747,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                 <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-black text-sm text-purple-950">Batch Airdrop Rewards</h4>
-                      <p className="text-[10px] font-bold text-purple-700">Each payout opens a Nimiq Pay approval. Failed payouts stay pending.</p>
+                      <h4 className="font-black text-sm text-purple-950">Approve NIM payouts</h4>
+                      <p className="text-[10px] font-bold text-purple-700">Send queued rewards from your creator wallet. Nimiq Pay will ask you to approve each transaction.</p>
                     </div>
                   </div>
                   <button 
@@ -756,7 +756,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                     disabled={isAirdropping}
                     className="w-full py-3 rounded-xl bg-purple-600 text-white font-black text-xs uppercase hover:bg-purple-700 disabled:opacity-50 transition-all shadow-retro-sm"
                   >
-                    {isAirdropping ? 'Processing Transactions...' : 'Airdrop to Winners Now'}
+                    {isAirdropping ? 'Waiting for wallet approval...' : 'Approve NIM payouts'}
                   </button>
                   {airdropMsg && <p className="text-xs font-bold text-purple-800 text-center">{airdropMsg}</p>}
                 </div>
