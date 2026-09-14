@@ -6,6 +6,7 @@ import { AudienceTerminalSection } from './components/AudienceTerminalSection'
 import { CollapsiblePlatformHero } from './components/CollapsiblePlatformHero'
 import { WalletConnectModal } from './components/WalletConnectModal'
 import { StageQrPortal } from './components/StageQrPortal'
+import { FirstRunGuide } from './components/FirstRunGuide'
 import type { StageEvent, AttendeeClaimRecord, GiveawayEntry } from './lib/types'
 import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount, joinGiveaway } from './lib/db'
 import { initNimiqProvider, requestNimiqAccount, type NimiqProviderInstance } from './lib/nimiq'
@@ -17,6 +18,7 @@ function SettingsPanel({
   claims,
   onConnect,
   onDisconnect,
+  onShowGuide,
 }: {
   nimiqAddress: string | null
   isInsideNimiqPay: boolean
@@ -24,6 +26,7 @@ function SettingsPanel({
   claims: AttendeeClaimRecord[]
   onConnect: () => void
   onDisconnect: () => void
+  onShowGuide: () => void
 }) {
   const joinedCount = new Set(claims.filter(c => c.walletAddress && c.walletAddress === nimiqAddress).map(c => c.eventId)).size
 
@@ -81,6 +84,8 @@ function SettingsPanel({
           <p className="font-black text-2xl text-[#121417]">{totalEarned}</p>
         </div>
       </div>
+
+      <button onClick={onShowGuide} className="w-full bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm text-left flex items-center justify-between"><span className="text-xs font-black">How to use EventQuest</span><span className="text-xs font-black text-[#FF532F]">Open guide ?</span></button>
 
       {/* App Info */}
       <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-3">
@@ -140,6 +145,7 @@ function App() {
 
   // Modals
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false)
+  const [isGuideOpen, setIsGuideOpen] = useState(() => localStorage.getItem('eventquest_guide_seen') !== 'true')
 
   // State to track async lookups for claims
   const [earnedPerTask, setEarnedPerTask] = useState<Record<string, boolean>>({})
@@ -596,6 +602,7 @@ function App() {
               claims={claims}
               onConnect={handleConnectWallet}
               onDisconnect={handleDisconnectWallet}
+              onShowGuide={() => setIsGuideOpen(true)}
             />
           )}
         </div>
@@ -644,6 +651,8 @@ function App() {
         </div>
 
       </main>
+
+      <FirstRunGuide isOpen={isGuideOpen} onClose={() => { setIsGuideOpen(false); localStorage.setItem('eventquest_guide_seen', 'true') }} />
 
       {/* WALLET CONNECT / DETAILS MODAL */}
       <WalletConnectModal
