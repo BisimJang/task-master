@@ -19,6 +19,8 @@ function SettingsPanel({
   onConnect,
   onDisconnect,
   onShowGuide,
+  creatorName,
+  onCreatorNameChange,
 }: {
   nimiqAddress: string | null
   isInsideNimiqPay: boolean
@@ -27,6 +29,8 @@ function SettingsPanel({
   onConnect: () => void
   onDisconnect: () => void
   onShowGuide: () => void
+  creatorName: string
+  onCreatorNameChange: (name: string) => void
 }) {
   const joinedCount = new Set(claims.filter(c => c.walletAddress && c.walletAddress === nimiqAddress).map(c => c.eventId)).size
 
@@ -71,6 +75,12 @@ function SettingsPanel({
           <span className="text-xs font-black text-white/60">Total Earned</span>
           <span className="font-black text-xl text-[#FBD023]">{totalEarned} NIM</span>
         </div>
+      </div>
+
+      <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-2">
+        <label htmlFor="creator-name" className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50">Creator name</label>
+        <input id="creator-name" value={creatorName} onChange={e => onCreatorNameChange(e.target.value)} placeholder="Your name or organization" maxLength={60} className="w-full text-xs font-bold p-2.5 rounded-xl border border-neutral-300" />
+        <p className="text-[10px] text-[#121417]/55">Saved on this device and used when you publish events.</p>
       </div>
 
       {/* Stats */}
@@ -146,6 +156,7 @@ function App() {
   // Modals
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(() => localStorage.getItem('eventquest_guide_seen') !== 'true')
+  const [creatorName, setCreatorName] = useState(() => localStorage.getItem('eventquest_creator_name') || '')
 
   // State to track async lookups for claims
   const [earnedPerTask, setEarnedPerTask] = useState<Record<string, boolean>>({})
@@ -493,6 +504,12 @@ function App() {
             </button>
           )}
         </div>
+        <nav className="hidden md:flex items-center gap-1 ml-6 mr-auto" aria-label="Primary navigation">
+          <button onClick={handleGoHome} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'stage' && !currentEvent ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Home</button>
+          <button onClick={() => setActiveTab('terminal')} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'terminal' ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Rewards</button>
+          <button onClick={() => setActiveTab('settings')} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'settings' ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Wallet</button>
+          <button onClick={handleOpenCreator} className="px-3 py-2 rounded-xl bg-[#FF532F] text-white text-xs font-black uppercase hover:bg-[#e64522]">Create</button>
+        </nav>
       </header>
 
       {/* MOBILE BOTTOM NAV */}
@@ -554,7 +571,7 @@ function App() {
       {/* MAIN CONTENT */}
       <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
         
-        <CollapsiblePlatformHero />
+        {!currentEvent && activeTab === 'stage' && <CollapsiblePlatformHero />}
         <button data-open-creator className="hidden" onClick={handleOpenCreator} />
 
         {/* MOBILE VIEW (always switches based on activeTab) */}
@@ -603,39 +620,54 @@ function App() {
               onConnect={handleConnectWallet}
               onDisconnect={handleDisconnectWallet}
               onShowGuide={() => setIsGuideOpen(true)}
+              creatorName={creatorName}
+              onCreatorNameChange={(name) => { setCreatorName(name); localStorage.setItem('eventquest_creator_name', name) }}
             />
           )}
         </div>
 
-        {/* DESKTOP GRID */}
+        {/* DESKTOP CONTENT */}
         <div className="hidden md:block">
-          {currentEvent ? (
-            <div className="grid grid-cols-[1.5fr_1fr] gap-6 items-start">
-              <div className="sticky top-24">
-                <LiveSessionsSection 
-                  event={currentEvent} 
-                  onTaskComplete={handleTaskComplete}
-                  earnedPerTask={earnedPerTask}
-                  onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
-                  onBack={handleGoHome}
-                  isStarred={starredEventIds.includes(currentEvent.id)}
-                  onToggleStar={() => handleToggleStar(currentEvent.id)}
-                  onJoinGiveaway={handleJoinGiveaway}
-                  giveawayJoined={giveawayJoined}
-                />
-              </div>
-              <div className="sticky top-24">
-                <AudienceTerminalSection 
-                  event={currentEvent}
-                  totalEarnedNIM={totalEarned}
-                  nimiqAddress={nimiqAddress}
-                  deviceId={deviceId}
-                  isInsideNimiqPay={isInsideNimiqPay}
-                  nimiqProvider={nimiqProvider}
-                  onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
-                  onClaimSuccess={handleClaimSuccess}
-                />
-              </div>
+          {activeTab === 'settings' ? (
+            <div className="max-w-xl mx-auto">
+              <SettingsPanel
+                nimiqAddress={nimiqAddress}
+                isInsideNimiqPay={isInsideNimiqPay}
+                totalEarned={totalEarned}
+                claims={claims}
+                onConnect={handleConnectWallet}
+                onDisconnect={handleDisconnectWallet}
+                onShowGuide={() => setIsGuideOpen(true)}
+                creatorName={creatorName}
+                onCreatorNameChange={(name) => { setCreatorName(name); localStorage.setItem('eventquest_creator_name', name) }}
+              />
+            </div>
+          ) : activeTab === 'terminal' ? (
+            <div className="max-w-xl mx-auto">
+              <AudienceTerminalSection
+                event={currentEvent}
+                totalEarnedNIM={totalEarned}
+                nimiqAddress={nimiqAddress}
+                deviceId={deviceId}
+                isInsideNimiqPay={isInsideNimiqPay}
+                nimiqProvider={nimiqProvider}
+                onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
+                onClaimSuccess={handleClaimSuccess}
+              />
+            </div>
+          ) : currentEvent ? (
+            <div className="max-w-3xl mx-auto">
+              <LiveSessionsSection
+                event={currentEvent}
+                onTaskComplete={handleTaskComplete}
+                earnedPerTask={earnedPerTask}
+                onOpenCreatorMenu={isCreator ? handleOpenCreator : undefined}
+                onBack={handleGoHome}
+                isStarred={starredEventIds.includes(currentEvent.id)}
+                onToggleStar={() => handleToggleStar(currentEvent.id)}
+                onJoinGiveaway={handleJoinGiveaway}
+                giveawayJoined={giveawayJoined}
+              />
             </div>
           ) : (
             <StageQrPortal
@@ -672,6 +704,7 @@ function App() {
           events={events}
           activeEvent={currentEvent}
           connectedAddress={nimiqAddress}
+          defaultCreatorName={creatorName}
           onSelectEvent={handleSelectEvent}
           onCreateEvent={handleCreateEvent}
           onUpdateEvent={handleUpdateEvent}
