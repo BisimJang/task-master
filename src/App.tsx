@@ -298,7 +298,7 @@ function App() {
     }
     
     await saveClaim(claimRecord)
-    await createPayout({
+    const payoutCreated = await createPayout({
       id: 'payout-' + claimRecord.id,
       claimId: claimRecord.id,
       eventId: claimRecord.eventId,
@@ -309,6 +309,9 @@ function App() {
       txHash: null,
       createdAt: claimRecord.claimedAt,
     })
+    if (!payoutCreated) {
+      alert('Winner recorded, but the payout queue could not be saved. Apply the Supabase payouts migration before sending rewards.')
+    }
     setClaims([...claims, claimRecord])
   }
 

@@ -1,5 +1,20 @@
 import type { StageEvent, AttendeeClaimRecord, PayoutRecord, PayoutStatus } from './types'
-import { supabase } from './supabase'
+import { supabase, isSupabaseConfigured } from './supabase'
+
+const LOCAL_CLAIMS_KEY = 'eventquest_local_claims'
+const LOCAL_PAYOUTS_KEY = 'eventquest_local_payouts'
+
+function readLocal<T>(key: string): T[] {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '[]') as T[]
+  } catch {
+    return []
+  }
+}
+
+function writeLocal<T>(key: string, value: T[]): void {
+  localStorage.setItem(key, JSON.stringify(value))
+}
 
 export async function getEvents(): Promise<StageEvent[]> {
   const { data, error } = await supabase.from('events').select('*').order('id', { ascending: false })
@@ -16,6 +31,7 @@ export async function saveEvent(event: StageEvent): Promise<void> {
 }
 
 export async function getClaims(): Promise<AttendeeClaimRecord[]> {
+  if (!isSupabaseConfigured) return readLocal<AttendeeClaimRecord>(LOCAL_CLAIMS_KEY)
   const { data, error } = await supabase.from('claims').select('*')
   if (error) {
     console.error('Error fetching claims:', error)
@@ -25,16 +41,31 @@ export async function getClaims(): Promise<AttendeeClaimRecord[]> {
 }
 
 export async function saveClaim(claim: AttendeeClaimRecord): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const claims = readLocal<AttendeeClaimRecord>(LOCAL_CLAIMS_KEY)
+    writeLocal(LOCAL_CLAIMS_KEY, [...claims.filter(existing => existing.id !== claim.id), claim])
+    return
+  }
   const { error } = await supabase.from('claims').insert(claim)
   if (error) console.error('Error saving claim:', error)
 }
 
 export async function updateClaimTxHash(claimId: string, txHash: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const claims = readLocal<AttendeeClaimRecord>(LOCAL_CLAIMS_KEY).map(claim => claim.id === claimId ? { ...claim, txHash } : claim)
+    writeLocal(LOCAL_CLAIMS_KEY, claims)
+    return
+  }
   const { error } = await supabase.from('claims').update({ txHash }).eq('id', claimId)
   if (error) console.error('Error updating claim txHash:', error)
 }
 
 export async function createPayout(payout: PayoutRecord): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    const payouts = readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY)
+    writeLocal(LOCAL_PAYOUTS_KEY, [...payouts.filter(existing => existing.id !== payout.id), payout])
+    return true
+  }
   const { error } = await supabase.from('payouts').insert(payout)
   if (error) {
     console.error('Error creating payout:', error)
@@ -44,6 +75,9 @@ export async function createPayout(payout: PayoutRecord): Promise<boolean> {
 }
 
 export async function getPendingPayouts(eventId: string): Promise<PayoutRecord[]> {
+  if (!isSupabaseConfigured) {
+    return readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY).filter(payout => payout.eventId === eventId && (payout.status === 'pending' || payout.status === 'failed'))
+  }
   const { data, error } = await supabase
     .from('payouts')
     .select('*')
@@ -52,7 +86,7 @@ export async function getPendingPayouts(eventId: string): Promise<PayoutRecord[]
     .order('createdAt', { ascending: true })
   if (error) {
     console.error('Error fetching payouts:', error)
-    return []
+    throw new Error(`Payout queue unavailable: ${error.message}`)
   }
   return (data || []) as PayoutRecord[]
 }
@@ -63,6 +97,14 @@ export async function updatePayout(
   details: { txHash?: string; failureMessage?: string } = {},
 ): Promise<boolean> {
   const now = new Date().toISOString()
+  if (!isSupabaseConfigured) {
+    const payouts = readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY).map(payout => {
+      if (payout.id !== payoutId) return payout
+      return { ...payout, status, ...(status === 'submitted' ? { submittedAt: now } : {}), ...(details.txHash ? { txHash: details.txHash } : {}), ...(details.failureMessage ? { failureMessage: details.failureMessage } : {}) }
+    })
+    writeLocal(LOCAL_PAYOUTS_KEY, payouts)
+    return true
+  }
   const update: Record<string, string> = { status }
   if (status === 'submitted') update.submittedAt = now
   if (details.txHash) {

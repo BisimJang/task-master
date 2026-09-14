@@ -178,7 +178,9 @@ export async function claimNimiqReward(
   })
 
   if (typeof result !== 'string' || !result) {
-    throw new Error('Nimiq Pay did not return a transaction hash.')
+    const providerError = result as { error?: { message?: string; type?: string } }
+    const message = providerError?.error?.message || providerError?.error?.type
+    throw new Error(message ? `Nimiq Pay rejected the payout: ${message}` : 'Nimiq Pay did not return a transaction hash.')
   }
 
   return result
