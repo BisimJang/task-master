@@ -6,8 +6,8 @@ import { AudienceTerminalSection } from './components/AudienceTerminalSection'
 import { CollapsiblePlatformHero } from './components/CollapsiblePlatformHero'
 import { WalletConnectModal } from './components/WalletConnectModal'
 import { StageQrPortal } from './components/StageQrPortal'
-import type { StageEvent, AttendeeClaimRecord } from './lib/types'
-import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount } from './lib/db'
+import type { StageEvent, AttendeeClaimRecord, GiveawayEntry } from './lib/types'
+import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount, joinGiveaway } from './lib/db'
 import { initNimiqProvider, requestNimiqAccount, type NimiqProviderInstance } from './lib/nimiq'
 
 function SettingsPanel({ 
@@ -143,6 +143,7 @@ function App() {
 
   // State to track async lookups for claims
   const [earnedPerTask, setEarnedPerTask] = useState<Record<string, boolean>>({})
+  const [giveawayJoined, setGiveawayJoined] = useState(false)
 
   // INITIAL LOAD
   useEffect(() => {
@@ -315,6 +316,23 @@ function App() {
     setClaims([...claims, claimRecord])
   }
 
+  const handleJoinGiveaway = async (): Promise<boolean> => {
+    if (!currentEvent || currentEvent.mode !== 'giveaway' || !nimiqAddress) {
+      setIsWalletModalOpen(true)
+      return false
+    }
+    const entry: GiveawayEntry = {
+      id: `giveaway-${currentEvent.id}-${nimiqAddress}`,
+      eventId: currentEvent.id,
+      walletAddress: nimiqAddress,
+      deviceIdentifier: deviceId,
+      joinedAt: new Date().toISOString(),
+    }
+    const joined = await joinGiveaway(entry)
+    if (joined) setGiveawayJoined(true)
+    return joined
+  }
+
   // Creator Modal Handlers
   const handleCreateEvent = async (newEvent: StageEvent) => {
     // Inject creator address when creating
@@ -387,6 +405,8 @@ function App() {
     setActiveTab('stage')
     window.history.replaceState({}, '', window.location.pathname)
   }
+
+  useEffect(() => { setGiveawayJoined(false) }, [currentEvent?.id, nimiqAddress])
 
   // Determine if current user is the creator
   const isCreator = !currentEvent || 
@@ -543,6 +563,8 @@ function App() {
                 onBack={handleGoHome}
                 isStarred={starredEventIds.includes(currentEvent.id)}
                 onToggleStar={() => handleToggleStar(currentEvent.id)}
+                onJoinGiveaway={handleJoinGiveaway}
+                giveawayJoined={giveawayJoined}
               />
             ) : (
               <StageQrPortal
@@ -591,6 +613,8 @@ function App() {
                   onBack={handleGoHome}
                   isStarred={starredEventIds.includes(currentEvent.id)}
                   onToggleStar={() => handleToggleStar(currentEvent.id)}
+                  onJoinGiveaway={handleJoinGiveaway}
+                  giveawayJoined={giveawayJoined}
                 />
               </div>
               <div className="sticky top-24">

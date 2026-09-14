@@ -1,8 +1,9 @@
-import type { StageEvent, AttendeeClaimRecord, PayoutRecord, PayoutStatus } from './types'
+import type { StageEvent, AttendeeClaimRecord, PayoutRecord, PayoutStatus, GiveawayEntry } from './types'
 import { supabase, isSupabaseConfigured } from './supabase'
 
 const LOCAL_CLAIMS_KEY = 'eventquest_local_claims'
 const LOCAL_PAYOUTS_KEY = 'eventquest_local_payouts'
+const LOCAL_GIVEAWAY_ENTRIES_KEY = 'eventquest_local_giveaway_entries'
 
 function readLocal<T>(key: string): T[] {
   try {
@@ -197,4 +198,24 @@ export async function toggleTaskLock(eventId: string, taskId: string, isLocked: 
   typedEvent.tasks = newTasks
   await saveEvent(typedEvent)
   return typedEvent
+}
+
+
+export async function joinGiveaway(entry: GiveawayEntry): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    const entries = readLocal<GiveawayEntry>(LOCAL_GIVEAWAY_ENTRIES_KEY)
+    if (entries.some(existing => existing.eventId === entry.eventId && existing.walletAddress === entry.walletAddress)) return true
+    writeLocal(LOCAL_GIVEAWAY_ENTRIES_KEY, [...entries, entry])
+    return true
+  }
+  const { error } = await supabase.from('giveaway_entries').upsert(entry, { onConflict: 'eventId,walletAddress' })
+  if (error) { console.error('Error joining giveaway:', error); return false }
+  return true
+}
+
+export async function getGiveawayEntries(eventId: string): Promise<GiveawayEntry[]> {
+  if (!isSupabaseConfigured) return readLocal<GiveawayEntry>(LOCAL_GIVEAWAY_ENTRIES_KEY).filter(entry => entry.eventId === eventId)
+  const { data, error } = await supabase.from('giveaway_entries').select('*').eq('eventId', eventId).order('joinedAt', { ascending: true })
+  if (error) { console.error('Error fetching giveaway entries:', error); throw new Error(`Giveaway entries unavailable: ${error.message}`) }
+  return (data || []) as GiveawayEntry[]
 }

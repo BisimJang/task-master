@@ -107,6 +107,15 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
     onUpdateEvent({ ...activeEvent, tasks: newTasks })
   }
 
+  const shuffleOptions = (options: string[], correctIndex: number) => {
+    const pairs = options.map((text, index) => ({ text, correct: index === correctIndex }))
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[pairs[i], pairs[j]] = [pairs[j], pairs[i]]
+    }
+    return { options: pairs.map(pair => pair.text), correctIndex: pairs.findIndex(pair => pair.correct) }
+  }
+
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -136,8 +145,10 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       maxWinners: winners,
       winnerCount: 0,
       isLocked: false,
-      options: [optionA.trim(), optionB.trim(), ...(optionC.trim() ? [optionC.trim()] : [])],
-      correctIndex: correctOptIndex,
+      ...(() => {
+        const shuffled = shuffleOptions([optionA.trim(), optionB.trim(), ...(optionC.trim() ? [optionC.trim()] : [])], correctOptIndex)
+        return { options: shuffled.options, correctIndex: shuffled.correctIndex }
+      })(),
     }
 
     if (viewMode === 'manage' && activeEvent) {
@@ -204,8 +215,10 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
         maxWinners: winners,
         winnerCount: 0,
         isLocked: false,
-        options: [parts[1], parts[2], parts[3]].filter(Boolean),
-        correctIndex: correctIdx,
+        ...(() => {
+          const shuffled = shuffleOptions([parts[1], parts[2], parts[3]].filter(Boolean), correctIdx)
+          return { options: shuffled.options, correctIndex: shuffled.correctIndex }
+        })(),
       })
     })
     const totalCost = newTasks.reduce((sum, task) => sum + task.rewardNIM * task.maxWinners, 0)
@@ -381,10 +394,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div><label className={labelCls}>Option A (Correct):</label><input required value={optionA} onChange={e => {setOptionA(e.target.value); setCorrectOptIndex(0);}} className={softInputCls} /></div>
+              <div><label className={labelCls}>Option A:</label><input required value={optionA} onChange={e => setOptionA(e.target.value)} className={softInputCls} /></div>
               <div><label className={labelCls}>Option B:</label><input required value={optionB} onChange={e => setOptionB(e.target.value)} className={softInputCls} /></div>
             </div>
             <div><label className={labelCls}>Option C (Optional):</label><input value={optionC} onChange={e => setOptionC(e.target.value)} className={softInputCls} /></div>
+            <div><label className={labelCls}>Correct answer:</label><select value={correctOptIndex} onChange={e => setCorrectOptIndex(Number(e.target.value))} className={softInputCls}><option value={0}>Option A</option><option value={1}>Option B</option><option value={2} disabled={!optionC.trim()}>Option C</option></select><p className="text-[10px] text-[#121417]/50 mt-1">Options are shuffled automatically when saved.</p></div>
           </>
         ) : (
           <div className="space-y-3">

@@ -28,6 +28,16 @@ export interface StageEvent {
   published: boolean    // true = locked, links generated
   tasks: SessionTask[]  // flat — no session layer
   creatorAddress?: string
+  mode?: 'quiz' | 'giveaway'
+  giveawayLimit?: number
+}
+
+export interface GiveawayEntry {
+  id: string
+  eventId: string
+  walletAddress: string
+  deviceIdentifier: string
+  joinedAt: string
 }
 
 export interface AttendeeClaimRecord {
