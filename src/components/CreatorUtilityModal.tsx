@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import {
   X, Zap, FolderPlus, Trash2, CheckCircle2, Copy, Plus, Info, Upload
 } from 'lucide-react'
-import type { StageEvent, SessionTask } from '../lib/types'
+import type { StageEvent, SessionTask, PayoutRecord } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
-import { updateClaimTxHash, getPendingPayouts, updatePayout } from '../lib/db'
+import { updateClaimTxHash, getPendingPayouts, getPayouts, updatePayout } from '../lib/db'
 import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
 
 interface CreatorUtilityModalProps {
@@ -62,6 +62,9 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const [airdropMsg, setAirdropMsg] = useState('')
   const [fundMsg, setFundMsg] = useState('')
   const [manageTab, setManageTab] = useState<'quizzes' | 'share' | 'payouts'>('quizzes')
+  const [payouts, setPayouts] = useState<PayoutRecord[]>([])
+  const [payoutsLoading, setPayoutsLoading] = useState(false)
+  const [payoutsError, setPayoutsError] = useState('')
 
   useEffect(() => {
     if (!isOpen) return
@@ -72,6 +75,16 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       setStep(1)
     }
   }, [isOpen, activeEvent, _events])
+
+  useEffect(() => {
+    if (!isOpen || manageTab !== 'payouts' || !activeEvent) return
+    setPayoutsLoading(true)
+    setPayoutsError('')
+    getPayouts(activeEvent.id)
+      .then(setPayouts)
+      .catch(error => setPayoutsError(error instanceof Error ? error.message : 'Could not load completed quizzes.'))
+      .finally(() => setPayoutsLoading(false))
+  }, [isOpen, manageTab, activeEvent])
 
   if (!isOpen) return null
 
@@ -743,6 +756,36 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
             {/* TAB 3: PAYOUTS & FUND */}
             {manageTab === 'payouts' && (
               <div className="space-y-4 animate-in fade-in">
+                <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-sm text-[#121417]">Completed quizzes</h4>
+                      <p className="text-[10px] font-bold text-[#121417]/60">Wallets that earned a reward in this event.</p>
+                    </div>
+                    <span className="text-xs font-black bg-[#F4F4F6] px-2 py-1 rounded-full">{payouts.length}</span>
+                  </div>
+                  {payoutsLoading && <p className="text-xs font-bold text-[#121417]/60">Loading winners...</p>}
+                  {payoutsError && <p role="alert" className="text-xs font-bold text-red-600 bg-red-50 p-2 rounded-lg">{payoutsError}</p>}
+                  {!payoutsLoading && !payoutsError && payouts.length === 0 && <p className="text-xs font-bold text-[#121417]/60 bg-[#F4F4F6] p-3 rounded-lg">No completed quizzes yet. Winners will appear here before payout approval.</p>}
+                  {payouts.length > 0 && <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {payouts.map(payout => {
+                      const task = activeEvent?.tasks.find(item => item.id === payout.taskId)
+                      const wallet = payout.recipientAddress
+                      const maskedWallet = wallet === 'unlinked' ? 'Wallet unavailable' : `${wallet.slice(0, 8)}...${wallet.slice(-6)}`
+                      return <div key={payout.id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-neutral-200 bg-[#F4F4F6]">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black truncate">{maskedWallet}</p>
+                          <p className="text-[10px] font-bold text-[#121417]/55 truncate">{task?.title || 'Completed quiz'}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-black">{payout.amountLuna / 100000} NIM</p>
+                          <p className={`text-[9px] font-black uppercase ${payout.status === 'failed' ? 'text-red-600' : payout.status === 'pending' ? 'text-amber-600' : 'text-emerald-600'}`}>{payout.status}</p>
+                        </div>
+                      </div>
+                    })}
+                  </div>}
+                </div>
+
                 {/* Batch Airdrop */}
                 <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">

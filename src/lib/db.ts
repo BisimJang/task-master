@@ -74,6 +74,22 @@ export async function createPayout(payout: PayoutRecord): Promise<boolean> {
   return true
 }
 
+export async function getPayouts(eventId: string): Promise<PayoutRecord[]> {
+  if (!isSupabaseConfigured) {
+    return readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY).filter(payout => payout.eventId === eventId)
+  }
+  const { data, error } = await supabase
+    .from('payouts')
+    .select('*')
+    .eq('eventId', eventId)
+    .order('createdAt', { ascending: true })
+  if (error) {
+    console.error('Error fetching payout ledger:', error)
+    throw new Error(`Payout ledger unavailable: ${error.message}`)
+  }
+  return (data || []) as PayoutRecord[]
+}
+
 export async function getPendingPayouts(eventId: string): Promise<PayoutRecord[]> {
   if (!isSupabaseConfigured) {
     return readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY).filter(payout => payout.eventId === eventId && (payout.status === 'pending' || payout.status === 'failed'))
