@@ -323,7 +323,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
         return
       }
 
-      setAirdropMsg(`Airdropping to ${eligiblePayouts.length} winners...`)
+      setAirdropMsg(`Requesting approval for ${eligiblePayouts.length} winner payout${eligiblePayouts.length === 1 ? '' : 's'}...`)
       const provider = await initNimiqProvider()
       if (!provider) {
         throw new Error('Open EventQuest in Nimiq Pay to approve payout transactions.')
@@ -333,7 +333,6 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       let failureCount = 0
       for (const payout of eligiblePayouts) {
         try {
-          await updatePayout(payout.id, 'submitted')
           const tx = await claimNimiqReward(provider, payout.recipientAddress, payout.amountLuna / 100000)
           if (tx) {
             await updatePayout(payout.id, 'submitted', { txHash: tx })
@@ -353,8 +352,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
       setAirdropMsg(
         failureCount > 0
-          ? `${successCount} submitted. ${failureCount} still pending and safe to retry.`
-          : `Successfully submitted ${successCount} payout${successCount === 1 ? '' : 's'}!`
+          ? `${successCount} submitted for verification. ${failureCount} failed and remain retryable.`
+          : `${successCount} payout${successCount === 1 ? '' : 's'} submitted. Awaiting blockchain verification.`
       )
       setTimeout(() => setAirdropMsg(''), 4000)
     } catch (err) {
@@ -816,7 +815,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-xs font-black">{payout.amountLuna / 100000} NIM</p>
-                          <p className={`text-[9px] font-black uppercase ${payout.status === 'failed' ? 'text-red-600' : payout.status === 'pending' ? 'text-amber-600' : 'text-emerald-600'}`}>{payout.status}</p>
+                          <p className={`text-[9px] font-black uppercase ${payout.status === 'failed' ? 'text-red-600' : payout.status === 'pending' ? 'text-amber-600' : 'text-emerald-600'}`}>{payout.status === 'submitted' ? 'submitted / verify' : payout.status}</p>
                         </div>
                       </div>
                     })}
@@ -838,7 +837,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-black text-sm text-purple-950">Approve NIM payouts</h4>
-                      <p className="text-[10px] font-bold text-purple-700">Send queued rewards from your creator wallet. Nimiq Pay will ask you to approve each transaction.</p>
+                      <p className="text-[10px] font-bold text-purple-700">Send queued rewards from your creator wallet. Approve each transaction in Nimiq Pay. A returned ID is marked submitted until confirmed on-chain.</p>
                     </div>
                   </div>
                   <button 

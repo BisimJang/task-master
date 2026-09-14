@@ -165,6 +165,12 @@ export async function claimNimiqReward(
   recipientAddress: string,
   amountNIM: number
 ): Promise<string> {
+  if (!Number.isFinite(amountNIM) || amountNIM <= 0) {
+    throw new Error('Payout amount must be greater than zero.')
+  }
+  if (!recipientAddress || recipientAddress === 'unlinked') {
+    throw new Error('Winner does not have a connected Nimiq wallet.')
+  }
   const amountLuna = Math.round(amountNIM * 100000)
 
   if (!provider) {
@@ -183,6 +189,7 @@ export async function claimNimiqReward(
     throw new Error(message ? `Nimiq Pay rejected the payout: ${message}` : 'Nimiq Pay did not return a transaction hash.')
   }
 
+  // Nimiq Pay returns the submitted transaction identifier. Confirmation must be reconciled separately.
   return result
 }
 
