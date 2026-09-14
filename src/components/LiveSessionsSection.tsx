@@ -9,6 +9,7 @@ import type { StageEvent, SessionTask } from '../lib/types'
 
 interface LiveSessionsSectionProps {
   event: StageEvent | null
+  isCreator?: boolean
   onTaskComplete: (taskId: string, optionIndex: number) => void
   earnedPerTask: Record<string, boolean>
   onOpenCreatorMenu?: () => void
@@ -43,11 +44,12 @@ interface TaskCardProps {
   task: SessionTask
   index: number
   isEarned: boolean
+  isCreator?: boolean
   onEarn: (taskId: string, optIdx: number) => void
   onOpenCreatorMenu?: () => void
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOpenCreatorMenu }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, isCreator, onEarn, onOpenCreatorMenu }) => {
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
   
@@ -61,20 +63,28 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOp
           <Lock className="w-5 h-5 text-neutral-400" />
         </div>
         <p className="font-black text-sm text-[#121417]/60 uppercase tracking-widest">Locked by Host</p>
-        <p className="text-[10px] font-bold text-[#121417]/40 max-w-[200px]">Wait for the stage presentation. This quiz will unlock live.</p>
+        <p className="text-[10px] font-bold text-[#121417]/40 max-w-[200px]">
+          {isCreator ? 'You have locked this quiz for the audience.' : 'Wait for the stage presentation. This quiz will unlock live.'}
+        </p>
         {onOpenCreatorMenu && (
           <button 
             onClick={onOpenCreatorMenu}
             className="mt-2 px-4 py-2 bg-[#121417] text-white text-xs font-black uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-retro-sm"
           >
-            Unlock in Creator Hub
+            {isCreator ? 'Manage in Creator Hub' : 'Unlock in Creator Hub'}
           </button>
         )}
       </div>
     )
   }
 
-  const markDone = () => { if (!isEarned && !isTaken) onEarn(task.id, 0) }
+  const markDone = () => { 
+    if (isCreator) {
+      alert("Hosts cannot participate or win their own tasks.")
+      return
+    }
+    if (!isEarned && !isTaken) onEarn(task.id, 0) 
+  }
 
   const openLink = () => {
     // @ts-ignore
@@ -82,26 +92,29 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOp
   }
 
   const pickOption = (idx: number) => {
+    if (isCreator) {
+      alert("Hosts cannot participate or answer their own quizzes.")
+      return
+    }
     if (isEarned || isTaken || task.type !== 'quiz') return
     setSelectedOpt(idx)
     if (idx === task.correctIndex) {
-      setFeedback('Correct! +' + task.rewardNIM + ' NIM unlocked.')
+      setFeedback('🎉 Correct! Your address is added to the Host Airdrop queue.')
       onEarn(task.id, idx)
     } else {
       setFeedback('Incorrect — try again.')
     }
   }
 
-  const isCorrectAnswer = (idx: number) => isEarned && idx === task.correctIndex
+  const isCorrectAnswer = (idx: number) => idx === task.correctIndex
 
   return (
     <div className={`p-4 rounded-2xl border-2 transition-all relative overflow-hidden ${
+      isCreator ? 'bg-amber-50/40 border-neutral-400' :
       isEarned ? 'bg-emerald-50/80 border-emerald-500' : 
       isTaken ? 'bg-neutral-100 border-neutral-300 opacity-60' : 
       'bg-white border-[#121417]'
     }`}>
-      
-      {/* Taken overlay logic for pointer events? Just letting the opacity and disabled buttons handle it. */}
       
       {/* Header row */}
       <div className="flex items-start justify-between gap-3 relative z-10">
@@ -118,9 +131,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOp
             </div>
             
             {/* Status Badges */}
-            {isEarned ? (
+            {isCreator ? (
+              <span className="text-[10px] font-black uppercase bg-[#121417] text-[#FBD023] px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1">
+                <span>Host View ({task.winnerCount || 0}/{task.maxWinners} Won)</span>
+              </span>
+            ) : isEarned ? (
               <span className="text-[10px] font-black uppercase bg-emerald-500 text-white px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /><span>You Won!</span>
+                <CheckCircle2 className="w-3 h-3" /><span>Queued for Airdrop</span>
               </span>
             ) : isTaken ? (
               <span className="text-[10px] font-black uppercase bg-neutral-300 text-neutral-600 px-2.5 py-1 rounded-full shrink-0">
@@ -142,42 +159,54 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOp
       {task.type === 'quiz' && task.options && (
         <div className="relative z-10">
           {feedback && (
-            <div className={`mt-2.5 p-2 rounded-xl text-xs font-bold flex items-center gap-2 ${feedback.startsWith('Correct') ? 'bg-emerald-100 border border-emerald-300 text-emerald-800' : 'bg-red-100 border border-red-300 text-red-800'}`}>
+            <div className={`mt-2.5 p-2 rounded-xl text-xs font-bold flex items-center gap-2 ${feedback.startsWith('🎉') ? 'bg-emerald-100 border border-emerald-300 text-emerald-800' : 'bg-red-100 border border-red-300 text-red-800'}`}>
               <AlertCircle className="w-3.5 h-3.5 shrink-0" /><span>{feedback}</span>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
             {task.options.map((opt, idx) => (
-              <button key={idx} onClick={() => pickOption(idx)} disabled={isEarned || isTaken}
+              <button 
+                key={idx} 
+                onClick={() => pickOption(idx)} 
+                disabled={Boolean(isCreator || isEarned || isTaken)}
                 className={`p-2.5 rounded-xl border text-xs font-bold text-left transition-all ${
-                  isEarned || isTaken ? 'cursor-default' : 'cursor-pointer hover:bg-neutral-100'
+                  isCreator
+                    ? (isCorrectAnswer(idx) ? 'bg-emerald-100 border-emerald-600 text-emerald-950 font-black cursor-default' : 'bg-neutral-100 border-neutral-300 text-neutral-500 cursor-not-allowed')
+                    : isEarned || isTaken ? 'cursor-default' : 'cursor-pointer hover:bg-neutral-100'
                 } ${
-                  selectedOpt === idx
+                  !isCreator && selectedOpt === idx
                     ? (isCorrectAnswer(idx) ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-red-800 text-white border-red-900')
-                    : 'bg-[#F4F4F6] border-neutral-300 text-[#121417]'
+                    : !isCreator ? 'bg-[#F4F4F6] border-neutral-300 text-[#121417]' : ''
                 }`}>
-                {opt}
+                <div className="flex items-center justify-between">
+                  <span>{opt}</span>
+                  {isCreator && isCorrectAnswer(idx) && (
+                    <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                      Answer
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Social / Link / Custom Tasks — Competition Mode (No Dwell Time) */}
+      {/* Social / Link / Custom Tasks */}
       {task.type !== 'quiz' && (
         <div className="mt-3 flex flex-col gap-2 relative z-10">
           {task.platform && <span className="text-[10px] text-[#121417]/50 font-bold uppercase tracking-wider">{task.platform}</span>}
           <div className="flex gap-2">
             {task.actionUrl && (
-              <button onClick={openLink} disabled={isEarned || isTaken}
-                className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black flex items-center justify-center gap-1.5 ${isEarned || isTaken ? 'bg-neutral-400 cursor-not-allowed' : 'bg-[#121417] hover:bg-black cursor-pointer'}`}>
+              <button onClick={openLink} disabled={Boolean(isCreator || isEarned || isTaken)}
+                className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black flex items-center justify-center gap-1.5 ${isCreator || isEarned || isTaken ? 'bg-neutral-400 cursor-not-allowed' : 'bg-[#121417] hover:bg-black cursor-pointer'}`}>
                 <ExternalLink className="w-3.5 h-3.5" /><span>{task.actionLabel ?? 'Open'}</span>
               </button>
             )}
-            {!isEarned && !isTaken && (
+            {!isCreator && !isEarned && !isTaken && (
               <button onClick={markDone}
                 className="flex-1 py-2.5 rounded-xl border-2 border-emerald-500 text-emerald-700 text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer hover:bg-emerald-50">
-                <CheckCircle2 className="w-3.5 h-3.5" /><span>Claim {task.rewardNIM} NIM</span>
+                <CheckCircle2 className="w-3.5 h-3.5" /><span>Enter Airdrop Queue (+{task.rewardNIM} NIM)</span>
               </button>
             )}
           </div>
@@ -190,6 +219,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, isEarned, onEarn, onOp
 // ─── LiveSessionsSection (Now basically "Tasks Section") ──────────────────────
 export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
   event,
+  isCreator,
   onTaskComplete,
   earnedPerTask,
   onOpenCreatorMenu,
@@ -325,6 +355,29 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
           </div>
         )}
 
+        {/* Host Banner if viewing as Creator */}
+        {isCreator && (
+          <div className="mt-4 p-4 bg-[#FBD023]/25 border-2 border-[#121417] rounded-2xl flex items-center justify-between gap-3 shadow-retro-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#121417] text-[#FBD023] flex items-center justify-center shrink-0">
+                <Radio className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-display font-black text-xs uppercase tracking-wider text-[#121417]">Host Stage Controller</p>
+                <p className="text-[11px] text-[#121417]/75 font-bold">You are the creator of this stage. Audience answers live below. Hosts cannot participate or win rewards.</p>
+              </div>
+            </div>
+            {onOpenCreatorMenu && (
+              <button 
+                onClick={onOpenCreatorMenu}
+                className="px-3 py-1.5 bg-[#121417] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black shrink-0 shadow-retro-sm cursor-pointer"
+              >
+                Host Hub
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Tasks List */}
         <div className="mt-4 space-y-4">
           {tasksToRender.length > 0 ? (
@@ -335,6 +388,7 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
                     task={task}
                     index={idx}
                     isEarned={Boolean(earnedPerTask[task.id])}
+                    isCreator={isCreator}
                     onEarn={onTaskComplete}
                     onOpenCreatorMenu={onOpenCreatorMenu}
                   />
