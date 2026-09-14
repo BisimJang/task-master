@@ -30,20 +30,15 @@ export const AudienceTerminalSection: React.FC<AudienceTerminalSectionProps> = (
   return (
     <div className="bg-[#121417] border-3 border-[#121417] rounded-[32px] p-6 text-white shadow-retro flex flex-col justify-between h-full select-none min-h-[420px]">
       <div>
-        {/* Terminal Header */}
-        <div className="flex items-center justify-between border-b border-white/15 pb-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FBD023] animate-pulse" />
-            <h2 className="font-display font-black text-xl text-white tracking-tight">
-              Your rewards
-            </h2>
-          </div>
-          <span className="text-[10px] font-mono font-bold bg-[#FF532F] text-white px-2.5 py-1 rounded-full uppercase">
-            Instant NIM
-          </span>
-        </div>
-
-        {/* Total Earned Counter Card */}
+        <details open className="group">
+          <summary className="list-none cursor-pointer">
+            {/* Terminal Header */}
+            <div className="flex items-center justify-between border-b border-white/15 pb-4">
+              <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#FBD023] animate-pulse" /><h2 className="font-display font-black text-xl text-white tracking-tight">Your rewards</h2></div>
+              <span className="text-[10px] font-mono font-bold bg-[#FF532F] text-white px-2.5 py-1 rounded-full uppercase">{totalEarnedNIM} NIM</span>
+            </div>
+          </summary>
+          {/* Total Earned Counter Card */}
         <div className="mt-5 p-5 bg-white/5 border-2 border-white/15 rounded-2xl">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase tracking-wider text-[#FBD023]">
@@ -99,7 +94,12 @@ export const AudienceTerminalSection: React.FC<AudienceTerminalSectionProps> = (
             </span>
           </div>
         </div>
+        </details>
 
+        <details className="group mt-4 border-t border-white/15 pt-4">
+          <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-wider text-white/70">What happens next <span className="float-right text-[#FBD023] group-open:rotate-180 transition-transform">?</span></summary>
+          <p className="text-xs text-white/60 leading-relaxed mt-2">Your wallet is recorded as a winner. The host reviews the winner list and approves the NIM transfer from their creator wallet. You do not need to sign a payment.</p>
+        </details>
       </div>
 
       {/* Bottom Claim Action Button */}

@@ -14,6 +14,7 @@ interface CreatorUtilityModalProps {
   events?: StageEvent[]
   activeEvent: StageEvent | null
   connectedAddress?: string | null
+  defaultCreatorName?: string
   onSelectEvent: (event: StageEvent) => void
   onCreateEvent: (newEvent: StageEvent) => void
   onUpdateEvent: (updatedEvent: StageEvent) => void
@@ -22,7 +23,7 @@ interface CreatorUtilityModalProps {
 }
 
 export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
-  isOpen, onClose, events: _events, activeEvent, connectedAddress, onSelectEvent, onCreateEvent, onUpdateEvent, onFundPool, onClearAllData
+  isOpen, onClose, events: _events, activeEvent, connectedAddress, defaultCreatorName = '', onSelectEvent, onCreateEvent, onUpdateEvent, onFundPool, onClearAllData
 }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [viewMode, setViewMode] = useState<'wizard' | 'manage' | 'dashboard'>(activeEvent ? 'manage' : (_events && _events.length > 0 ? 'dashboard' : 'wizard'))
@@ -30,7 +31,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   // ... (keep rest of state exactly as before)
   const [draftTitle, setDraftTitle] = useState('')
   const [draftDesc, setDraftDesc] = useState('')
-  const [draftOrg, setDraftOrg] = useState('')
+  const [draftOrg, setDraftOrg] = useState(defaultCreatorName)
+
+  useEffect(() => {
+    if (isOpen && defaultCreatorName && !draftOrg) setDraftOrg(defaultCreatorName)
+  }, [isOpen, defaultCreatorName, draftOrg])
   const [draftPool, setDraftPool] = useState('')
   const [draftMode, setDraftMode] = useState<'quiz' | 'giveaway'>('quiz')
   const [draftGiveawayLimit, setDraftGiveawayLimit] = useState('')
@@ -286,7 +291,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       slug: slug || 'event-' + Date.now(),
       title: draftTitle.trim(),
       description: draftDesc.trim(),
-      organizer: draftOrg.trim(),
+      organizer: (draftOrg.trim() || defaultCreatorName.trim()),
       totalPoolNIM: Number(draftPool) || 0,
       tasks: draftTasks,
       mode: draftMode,
@@ -482,7 +487,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-white border-t-3 sm:border-3 border-[#121417] rounded-t-[32px] sm:rounded-[32px] p-5 sm:p-7 shadow-retro-lg text-[#121417] max-h-[92vh] sm:max-h-[88vh] flex flex-col">
+      <div className="relative w-full max-w-3xl bg-white border-t-3 sm:border-3 border-[#121417] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 shadow-retro-lg text-[#121417] max-h-[96vh] sm:max-h-[92vh] flex flex-col">
         {/* Mobile handle indicator */}
         <div className="w-12 h-1.5 bg-neutral-300 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
 
@@ -575,7 +580,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <h3 className="font-display font-black text-base border-b pb-2">1. Event Details</h3>
                 <div><label className={labelCls}>Event Name:</label><input type="text" value={draftTitle} onChange={e => setDraftTitle(e.target.value)} className={inputCls} /></div>
-                <div><label className={labelCls}>Organizer:</label><input type="text" value={draftOrg} onChange={e => setDraftOrg(e.target.value)} className={softInputCls} /></div>
+                <div><label className={labelCls}>Creator name:</label><input type="text" value={draftOrg} onChange={e => setDraftOrg(e.target.value)} className={softInputCls} /></div>
                 <div><label className={labelCls}>Description:</label><textarea rows={2} value={draftDesc} onChange={e => setDraftDesc(e.target.value)} className={`${softInputCls} resize-none`} /></div>
                 <div className="p-3 bg-[#F4F4F6] rounded-xl space-y-2">
                   <label className="text-[11px] font-black uppercase">Format</label>
@@ -681,7 +686,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   manageTab === 'payouts' ? 'bg-[#121417] text-white shadow-retro-sm' : 'text-[#121417]/60 hover:text-[#121417]'
                 }`}
               >
-                Airdrop & Pool
+                Wallets & Payouts
               </button>
             </div>
 
@@ -825,6 +830,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
                 {/* Batch Airdrop */}
                 <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-white/70 rounded-xl p-2"><p className="text-[9px] font-black uppercase text-purple-700">Winners</p><p className="text-lg font-black text-purple-950">{payouts.length}</p></div>
+                    <div className="bg-white/70 rounded-xl p-2"><p className="text-[9px] font-black uppercase text-amber-700">Pending</p><p className="text-lg font-black text-amber-900">{payouts.filter(payout => payout.status === 'pending' || payout.status === 'failed').length}</p></div>
+                    <div className="bg-white/70 rounded-xl p-2"><p className="text-[9px] font-black uppercase text-emerald-700">Submitted</p><p className="text-lg font-black text-emerald-900">{payouts.filter(payout => payout.status === 'submitted' || payout.status === 'confirmed').length}</p></div>
+                  </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-black text-sm text-purple-950">Approve NIM payouts</h4>

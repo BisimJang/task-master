@@ -7,7 +7,7 @@ const steps = [
   { title: 'Welcome to EventQuest', body: 'EventQuest turns live events into quick NIM rewards. You can join as an attendee or create a stage as a host.', icon: <Zap className="w-5 h-5 text-[#FBD023]" /> },
   { title: 'Joining as an attendee', body: 'Open a host link or scan their QR code, connect your Nimiq wallet, then answer a quiz while winner slots are available. Giveaway links only ask you to enter your wallet.', icon: <HelpCircle className="w-5 h-5 text-white" /> },
   { title: 'Creating as a host', body: 'Tap Create, choose Quiz race or Wallet giveaway link, add the reward budget, then share the event link or QR code with your audience.', icon: <Gift className="w-5 h-5 text-[#121417]" /> },
-  { title: 'How payouts work', body: 'Quiz wins and giveaway entries are queued for the host. The host reviews wallets in Creator Hub and approves NIM transfers from their connected Nimiq Pay wallet.', icon: <Wallet className="w-5 h-5 text-white" /> },
+  { title: 'How payouts work', body: 'Quiz wins and giveaway entries are queued for the host. The host reviews wallets and pending payouts in Creator Hub, then approves NIM transfers from their connected Nimiq Pay wallet.', icon: <Wallet className="w-5 h-5 text-white" /> },
 ]
 
 export const FirstRunGuide: React.FC<FirstRunGuideProps> = ({ isOpen, onClose }) => {
