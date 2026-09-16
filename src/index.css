@@ -10,6 +10,8 @@
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #f7f7f5;
+    color: #121417;
     padding-top: var(--safe-top);
     padding-bottom: var(--safe-bottom);
     padding-left: var(--safe-left);
@@ -22,21 +24,151 @@
   }
 }
 
-/* Custom retro-pop utilities */
+/* EventQuest surface utilities */
 .shadow-retro {
-  box-shadow: 4px 4px 0px #121417;
+  box-shadow: 3px 3px 0 #121417;
 }
 
 .shadow-retro-sm {
-  box-shadow: 2px 2px 0px #121417;
+  box-shadow: 2px 2px 0 #121417;
 }
 
 .shadow-retro-lg {
-  box-shadow: 6px 6px 0px #121417;
+  box-shadow: 4px 4px 0 #121417;
 }
 
 .shadow-capsule {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+.app-surface {
+  border: 1px solid rgba(18, 20, 23, 0.12);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 12px 28px -20px rgba(18, 20, 23, 0.35);
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid #ff532f;
+  outline-offset: 3px;
+}
+
+.shape-field {
+  position: relative;
+  isolation: isolate;
+}
+
+.shape-field::before,
+.shape-field::after {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  opacity: 0.18;
+}
+
+.shape-field::before {
+  top: 18%;
+  left: -18px;
+  width: 84px;
+  height: 84px;
+  border: 3px solid #ff532f;
+  border-radius: 999px;
+  transform: rotate(-12deg);
+}
+
+.shape-field::after {
+  right: 2%;
+  bottom: 16%;
+  width: 70px;
+  height: 70px;
+  border: 3px solid #121417;
+  transform: rotate(45deg);
+}
+
+.shape-field::marker {
+  display: none;
+}
+
+.shape-surface-ink,
+.shape-surface-white,
+.shape-surface-yellow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.shape-surface-ink::before,
+.shape-surface-ink::after,
+.shape-surface-white::before,
+.shape-surface-white::after,
+.shape-surface-yellow::before,
+.shape-surface-yellow::after {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.shape-surface-ink > *,
+.shape-surface-white > *,
+.shape-surface-yellow > * {
+  position: relative;
+  z-index: 1;
+}
+
+.shape-surface-ink::before {
+  top: -42px;
+  right: -30px;
+  width: 132px;
+  height: 132px;
+  border: 5px solid rgba(251, 208, 35, 0.32);
+  border-radius: 999px;
+}
+
+.shape-surface-ink::after {
+  right: 12%;
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  border: 5px solid rgba(255, 83, 47, 0.42);
+  transform: rotate(45deg);
+}
+
+.shape-surface-white::before {
+  top: 18px;
+  right: 22px;
+  width: 54px;
+  height: 54px;
+  border: 3px solid rgba(255, 83, 47, 0.2);
+  border-radius: 999px;
+}
+
+.shape-surface-white::after {
+  left: 18px;
+  bottom: 18px;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(18, 20, 23, 0.14);
+  transform: rotate(45deg);
+}
+
+.shape-surface-yellow::before {
+  top: -24px;
+  right: 12%;
+  width: 82px;
+  height: 82px;
+  border: 4px solid rgba(18, 20, 23, 0.18);
+  border-radius: 999px;
+}
+
+.shape-surface-yellow::after {
+  right: 18px;
+  bottom: 14px;
+  width: 30px;
+  height: 30px;
+  border: 4px solid rgba(255, 83, 47, 0.28);
+  transform: rotate(45deg);
 }
 
 /* Custom scrollbars */

@@ -139,7 +139,7 @@ export const CollapsibleHero: React.FC<CollapsibleHeroProps> = ({
                   <span className="text-lg uppercase text-[#FF532F]">{campaign.rewardType}</span>
                 </div>
                 <div className="text-[11px] font-bold text-[#121417]/80">
-                  Instant on-chain payout confirmed in Nimiq Pay
+                  Creator-approved payout requests through Nimiq Pay
                 </div>
               </div>
 

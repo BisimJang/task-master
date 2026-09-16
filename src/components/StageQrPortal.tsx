@@ -65,16 +65,16 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
   }
 
   return (
-    <div id="stage-portal" className="space-y-6 pt-2 pb-24 scroll-mt-24">
+    <div id="stage-portal" className="space-y-5 pt-2 pb-24 scroll-mt-24">
       {/* 1. STARRED STAGES PRESENT ON HOME */}
       {starredEvents.length > 0 ? (
         <div className="space-y-6">
           {/* Active Starred Event QR Spotlight */}
           {featuredEvent && (
-            <div className="bg-[#121417] border-3 border-[#121417] rounded-3xl p-6 text-white shadow-retro relative overflow-hidden">
+            <div className="shape-surface-ink bg-[#121417] rounded-[1.75rem] p-5 sm:p-6 text-white shadow-retro relative overflow-hidden">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 {/* Direct QR Code */}
-                <div className="bg-white p-3.5 rounded-2xl border-2 border-white shadow-sm flex flex-col items-center justify-center shrink-0">
+                <div className="bg-white p-3 rounded-2xl border border-white shadow-sm flex flex-col items-center justify-center shrink-0">
                   <QRCodeSVG
                     value={featuredEventUrl}
                     size={140}
@@ -154,11 +154,11 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {starredEvents.map((evt) => (
                 <div
                   key={evt.id}
-                  className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm flex flex-col justify-between hover:border-[#FF532F] transition-all"
+                  className="shape-surface-white bg-white border border-[#121417]/15 rounded-2xl p-4 shadow-[0_8px_20px_-18px_rgba(18,20,23,0.6)] flex flex-col justify-between hover:border-[#FF532F] hover:-translate-y-0.5 transition-all"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
@@ -205,7 +205,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
         </div>
       ) : (
         /* 2. EMPTY HOME: NO EVENTS SHOWN UNLESS STARRED */
-        <div className="bg-white border-3 border-[#121417] rounded-3xl p-8 text-center space-y-6 shadow-retro">
+        <div className="bg-white border border-[#121417]/12 rounded-[1.75rem] p-8 text-center space-y-6 shadow-[0_16px_32px_-24px_rgba(18,20,23,0.5)]">
           <div className="w-16 h-16 rounded-2xl bg-[#FBD023] border-2 border-[#121417] flex items-center justify-center mx-auto shadow-retro-sm">
             <QrCode className="w-8 h-8 text-[#121417]" />
           </div>
@@ -215,7 +215,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
               Scan QR Code to Join
             </h3>
             <p className="text-xs text-[#121417]/70 font-bold leading-relaxed">
-              Use your camera or the Nimiq Pay scanner to enter a stage presentation. Star any stage to keep it pinned to your home screen.
+              Open the Nimiq Pay scanner to enter a stage presentation, or paste the event link below. EventQuest does not access your camera directly. Star any stage to keep it pinned to your home screen.
             </p>
           </div>
 
@@ -245,7 +245,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
               className="w-full sm:w-auto px-6 py-3 bg-[#FBD023] hover:bg-[#ebd52a] text-[#121417] border-2 border-[#121417] font-black text-xs uppercase tracking-wider rounded-xl shadow-retro-sm hover:translate-y-0.5 hover:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Scan className="w-4 h-4" />
-              <span>Scan Stage QR</span>
+              <span>Open Nimiq Pay Scanner</span>
             </button>
 
             <button
@@ -262,7 +262,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
 
       {/* QUICK JOIN BAR IF USER ALREADY HAS STARRED STAGES */}
       {starredEvents.length > 0 && (
-        <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-[#121417]/12 rounded-2xl p-4 shadow-[0_8px_20px_-18px_rgba(18,20,23,0.5)]">
           <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-bold text-[#121417]/70 shrink-0">
               <Scan className="w-4 h-4 text-[#FF532F]" />
@@ -288,7 +288,7 @@ export const StageQrPortal: React.FC<StageQrPortalProps> = ({
 
       {/* WALLET CONNECT PROMPT (IF NOT SIGNED IN) */}
       {!nimiqAddress && (
-        <div className="bg-[#FBD023] border-3 border-[#121417] rounded-3xl p-5 shadow-retro-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-[#FBD023] border border-[#121417] rounded-2xl p-5 shadow-retro-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
             <h4 className="font-display font-black text-base text-[#121417]">
               Connect Nimiq Wallet to Claim NIM

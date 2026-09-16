@@ -28,7 +28,7 @@ export const AudienceTerminalSection: React.FC<AudienceTerminalSectionProps> = (
   onOpenCreatorMenu,
 }) => {
   return (
-    <div className="bg-[#121417] border-3 border-[#121417] rounded-[32px] p-6 text-white shadow-retro flex flex-col justify-between h-full select-none min-h-[420px]">
+    <div className="shape-surface-ink bg-[#121417] border-3 border-[#121417] rounded-[32px] p-6 text-white shadow-retro flex flex-col justify-between h-full select-none min-h-[420px]">
       <div>
         <details open className="group">
           <summary className="list-none cursor-pointer">

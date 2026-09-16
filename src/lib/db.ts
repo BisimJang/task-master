@@ -219,3 +219,50 @@ export async function getGiveawayEntries(eventId: string): Promise<GiveawayEntry
   if (error) { console.error('Error fetching giveaway entries:', error); throw new Error(`Giveaway entries unavailable: ${error.message}`) }
   return (data || []) as GiveawayEntry[]
 }
+
+/** Create one pending payout for every eligible giveaway entry, without duplicates. */
+export async function createGiveawayPayouts(
+  eventId: string,
+  rewardNIM: number,
+  entries: GiveawayEntry[],
+): Promise<number> {
+  if (!Number.isFinite(rewardNIM) || rewardNIM <= 0) return 0
+  const eligible = entries.filter(entry => entry.eventId === eventId && entry.walletAddress && entry.walletAddress !== 'unlinked')
+  if (!isSupabaseConfigured) {
+    const payouts = readLocal<PayoutRecord>(LOCAL_PAYOUTS_KEY)
+    const existing = new Set(payouts.filter(payout => payout.eventId === eventId).map(payout => payout.claimId))
+    const additions = eligible
+      .filter(entry => !existing.has(`giveaway:${entry.id}`))
+      .map(entry => ({
+        id: `payout-giveaway-${entry.id}`,
+        claimId: `giveaway:${entry.id}`,
+        eventId,
+        taskId: 'giveaway',
+        recipientAddress: entry.walletAddress,
+        amountLuna: Math.round(rewardNIM * 100000),
+        status: 'pending' as const,
+        txHash: null,
+        createdAt: new Date().toISOString(),
+      }))
+    writeLocal(LOCAL_PAYOUTS_KEY, [...payouts, ...additions])
+    return additions.length
+  }
+  const payouts = eligible.map(entry => ({
+    id: `payout-giveaway-${entry.id}`,
+    claimId: `giveaway:${entry.id}`,
+    eventId,
+    taskId: 'giveaway',
+    recipientAddress: entry.walletAddress,
+    amountLuna: Math.round(rewardNIM * 100000),
+    status: 'pending' as const,
+    txHash: null,
+    createdAt: new Date().toISOString(),
+  }))
+  if (!payouts.length) return 0
+  const { data, error } = await supabase.from('payouts').upsert(payouts, { onConflict: 'claimId', ignoreDuplicates: true }).select('id')
+  if (error) {
+    console.error('Error creating giveaway payouts:', error)
+    return 0
+  }
+  return data?.length || 0
+}

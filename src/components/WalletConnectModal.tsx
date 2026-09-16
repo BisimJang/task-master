@@ -70,7 +70,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
             </div>
 
             {/* Address Box */}
-            <div className="bg-[#121417] p-4 rounded-2xl text-white space-y-2">
+            <div className="shape-surface-ink bg-[#121417] p-4 rounded-2xl text-white space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-white/50">
                 Nimiq Address
               </p>

@@ -30,6 +30,8 @@ export interface StageEvent {
   creatorAddress?: string
   mode?: 'quiz' | 'giveaway'
   giveawayLimit?: number
+  giveawayRewardNIM?: number
+  giveawayClosed?: boolean
 }
 
 export interface GiveawayEntry {
