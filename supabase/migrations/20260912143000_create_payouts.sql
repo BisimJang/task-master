@@ -36,3 +36,6 @@ create policy "Mini App can update payouts"
   on public.payouts for update
   using (true)
   with check (true);
+
+-- Ensure PostgREST sees the table immediately when this is run in the SQL editor.
+notify pgrst, 'reload schema';

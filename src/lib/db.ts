@@ -17,6 +17,16 @@ function writeLocal<T>(key: string, value: T[]): void {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+function payoutSchemaError(error: { message?: string; code?: string }): Error {
+  const message = error.message || 'Unknown Supabase error.'
+  const missingTable = error.code === 'PGRST205' || message.includes("Could not find the table 'public.payouts'")
+  return new Error(
+    missingTable
+      ? 'Payout ledger is not installed in Supabase. Apply supabase/migrations/20260912143000_create_payouts.sql, then reload the app.'
+      : `Payout ledger unavailable: ${message}`,
+  )
+}
+
 export async function getEvents(): Promise<StageEvent[]> {
   const { data, error } = await supabase.from('events').select('*').order('id', { ascending: false })
   if (error) {
@@ -86,7 +96,7 @@ export async function getPayouts(eventId: string): Promise<PayoutRecord[]> {
     .order('createdAt', { ascending: true })
   if (error) {
     console.error('Error fetching payout ledger:', error)
-    throw new Error(`Payout ledger unavailable: ${error.message}`)
+    throw payoutSchemaError(error)
   }
   return (data || []) as PayoutRecord[]
 }
@@ -103,7 +113,7 @@ export async function getPendingPayouts(eventId: string): Promise<PayoutRecord[]
     .order('createdAt', { ascending: true })
   if (error) {
     console.error('Error fetching payouts:', error)
-    throw new Error(`Payout queue unavailable: ${error.message}`)
+    throw payoutSchemaError(error)
   }
   return (data || []) as PayoutRecord[]
 }
