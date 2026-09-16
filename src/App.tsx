@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap, Settings, ArrowLeft, Wallet, Menu, X } from 'lucide-react'
+import { Sparkles, Zap, Settings, ArrowLeft, Wallet, Menu, Plus, X } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
@@ -563,6 +563,18 @@ function App() {
           >
             <Zap className={`w-5 h-5 ${activeTab === 'terminal' ? 'text-[#FBD023]' : ''}`} />
             <span className="text-[9px] font-black uppercase tracking-widest">Rewards</span>
+          </button>
+
+          {/* Quick creator access */}
+          <button
+            onClick={handleOpenCreator}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[#121417]/55 transition-all"
+            aria-label="Create event and open Creator Hub"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#121417] bg-[#FF532F] text-white shadow-retro-sm transition-transform hover:-translate-y-0.5 active:translate-y-0">
+              <Plus className="h-5 w-5 stroke-[3]" />
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-widest">Create</span>
           </button>
 
           {/* Settings / Wallet */}
