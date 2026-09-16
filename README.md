@@ -84,6 +84,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 Apply the migrations in `supabase/migrations/` before testing hosted payouts or giveaway entries. Without Supabase configuration, the app uses localStorage for development data.
 
+If Creator Hub reports `public.payouts` missing from the schema cache, the payout migration has not reached that Supabase project. Open the Supabase SQL Editor, run `supabase/migrations/20260912143000_create_payouts.sql`, then reload EventQuest. The migration includes a PostgREST schema-cache reload notification.
+
 ## Local data
 
 The local fallback stores creator settings, starred events, guide state, claims, payout records, giveaway entries, and the device identifier in browser storage. Relevant keys include:
