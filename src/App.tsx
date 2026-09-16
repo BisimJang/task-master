@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Zap, Mic2, Settings, ArrowLeft, Wallet } from 'lucide-react'
+import { Sparkles, Zap, Settings, ArrowLeft, Wallet, Menu, X } from 'lucide-react'
 import { CreatorUtilityModal } from './components/CreatorUtilityModal'
 import { LiveSessionsSection } from './components/LiveSessionsSection'
 import { AudienceTerminalSection } from './components/AudienceTerminalSection'
@@ -8,7 +8,7 @@ import { WalletConnectModal } from './components/WalletConnectModal'
 import { StageQrPortal } from './components/StageQrPortal'
 import { FirstRunGuide } from './components/FirstRunGuide'
 import type { StageEvent, AttendeeClaimRecord, GiveawayEntry } from './lib/types'
-import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount, joinGiveaway } from './lib/db'
+import { getEvents, saveEvent, getClaims, saveClaim, createPayout, hasClaimedTask, clearAllStorage, updateTaskWinnerCount, joinGiveaway, getGiveawayEntries } from './lib/db'
 import { initNimiqProvider, requestNimiqAccount, type NimiqProviderInstance } from './lib/nimiq'
 
 function SettingsPanel({ 
@@ -19,6 +19,8 @@ function SettingsPanel({
   onConnect,
   onDisconnect,
   onShowGuide,
+  onOpenCreatorMenu,
+  onResetPreferences,
   creatorName,
   onCreatorNameChange,
 }: {
@@ -29,6 +31,8 @@ function SettingsPanel({
   onConnect: () => void
   onDisconnect: () => void
   onShowGuide: () => void
+  onOpenCreatorMenu: () => void
+  onResetPreferences: () => void
   creatorName: string
   onCreatorNameChange: (name: string) => void
 }) {
@@ -78,9 +82,20 @@ function SettingsPanel({
       </div>
 
       <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-2">
-        <label htmlFor="creator-name" className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50">Creator name</label>
+        <label htmlFor="creator-name" className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50">Creator name (saved once)</label>
         <input id="creator-name" value={creatorName} onChange={e => onCreatorNameChange(e.target.value)} placeholder="Your name or organization" maxLength={60} className="w-full text-xs font-bold p-2.5 rounded-xl border border-neutral-300" />
-        <p className="text-[10px] text-[#121417]/55">Saved on this device and used when you publish events.</p>
+        <p className="text-[10px] text-[#121417]/55">Set this once in Settings. New events reuse it automatically.</p>
+      </div>
+
+      <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#121417]/50">Creator tools</p>
+            <p className="text-xs font-bold mt-1">Create events, manage entries, and send the payout queue.</p>
+          </div>
+          <button onClick={onOpenCreatorMenu} className="rounded-xl bg-[#FF532F] px-3 py-2 text-[10px] font-black uppercase text-white">Open Hub</button>
+        </div>
+        <p className="text-[10px] text-[#121417]/55">Giveaways are event types: create one, share its link, then review every wallet submission in Creator Hub.</p>
       </div>
 
       {/* Stats */}
@@ -96,6 +111,15 @@ function SettingsPanel({
       </div>
 
       <button onClick={onShowGuide} className="w-full bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm text-left flex items-center justify-between"><span className="text-xs font-black">How to use EventQuest</span><span className="text-xs font-black text-[#FF532F]">Open guide ?</span></button>
+
+      <details className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm">
+        <summary className="cursor-pointer text-xs font-black">Data & privacy</summary>
+        <div className="mt-3 space-y-2 text-[11px] font-bold text-[#121417]/65">
+          <p>Your creator name, starred stages, guide status, and device identifier are stored locally on this device.</p>
+          <p>Wallet addresses and event activity may be used for participation, winner records, and host payout review.</p>
+          <button onClick={onResetPreferences} className="mt-1 text-[#FF532F] font-black uppercase tracking-wider">Reset local preferences</button>
+        </div>
+      </details>
 
       {/* App Info */}
       <div className="bg-white border-2 border-[#121417] rounded-2xl p-4 shadow-retro-sm space-y-3">
@@ -155,6 +179,7 @@ function App() {
 
   // Modals
   const [isCreatorModalOpen, setIsCreatorModalOpen] = useState(false)
+  const [isCreatorMenuOpen, setIsCreatorMenuOpen] = useState(false)
   const [isGuideOpen, setIsGuideOpen] = useState(() => localStorage.getItem('eventquest_guide_seen') !== 'true')
   const [creatorName, setCreatorName] = useState(() => localStorage.getItem('eventquest_creator_name') || '')
 
@@ -334,10 +359,14 @@ function App() {
   }
 
   const handleJoinGiveaway = async (): Promise<boolean> => {
-    if (!currentEvent || currentEvent.mode !== 'giveaway' || !nimiqAddress) {
+    if (!currentEvent || currentEvent.mode !== 'giveaway') return false
+    if (currentEvent.giveawayClosed) return false
+    if (!nimiqAddress) {
       setIsWalletModalOpen(true)
       return false
     }
+    if (currentEvent.giveawayLimit !== undefined &&
+      (await getGiveawayEntries(currentEvent.id)).length >= currentEvent.giveawayLimit) return false
     const entry: GiveawayEntry = {
       id: `giveaway-${currentEvent.id}-${nimiqAddress}`,
       eventId: currentEvent.id,
@@ -436,13 +465,14 @@ function App() {
       return
     }
     setIsCreatorModalOpen(true)
+    setIsCreatorMenuOpen(false)
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F4F6] text-[#121417] selection:bg-[#FF532F] selection:text-white pb-24 md:pb-0 font-sans">
+    <div className="min-h-screen bg-[#F7F7F5] text-[#121417] selection:bg-[#FF532F] selection:text-white pb-24 md:pb-0 font-sans">
       
       {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b-2 border-[#121417] px-4 py-3 flex items-center justify-between shadow-retro-sm">
+      <header className="sticky top-0 z-40 bg-[#F7F7F5]/95 backdrop-blur-md border-b border-[#121417]/10 px-4 sm:px-6 py-3 flex items-center gap-4 shadow-[0_8px_24px_-20px_rgba(18,20,23,0.45)]">
         <div className="flex items-center gap-2">
           {currentEvent && (
             <button
@@ -454,8 +484,8 @@ function App() {
               <span className="hidden sm:inline">Back</span>
             </button>
           )}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={handleGoHome} title="Go to Home">
-            <div className="w-8 h-8 rounded-full bg-[#121417] flex items-center justify-center border-2 border-white shadow-[0_0_0_2px_#121417]">
+          <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={handleGoHome} title="Go to Home">
+            <div className="w-8 h-8 rounded-xl bg-[#121417] flex items-center justify-center shadow-retro-sm">
               <Zap className="w-4 h-4 text-[#FBD023]" />
             </div>
             <div>
@@ -465,11 +495,11 @@ function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 order-3 ml-auto">
           {nimiqAddress ? (
             <button
               onClick={() => setIsWalletModalOpen(true)}
-              className="flex bg-white text-[#121417] px-3 py-1.5 rounded-full items-center gap-1.5 shadow-retro-xs border-2 border-[#121417] cursor-pointer hover:bg-neutral-50"
+              className="focus-ring flex bg-white text-[#121417] px-3 py-1.5 rounded-full items-center gap-1.5 border border-[#121417]/15 cursor-pointer hover:border-[#121417]/40 transition-colors"
               title="Wallet Details"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -478,7 +508,7 @@ function App() {
           ) : (
             <button
               onClick={handleConnectWallet}
-              className="flex items-center gap-1.5 bg-[#FBD023] hover:bg-[#ebd52a] text-[#121417] px-3 py-1.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase tracking-wider shadow-retro-xs hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer"
+              className="focus-ring flex items-center gap-1.5 bg-[#FBD023] hover:bg-[#f6c80b] text-[#121417] px-3 py-1.5 rounded-full border border-[#121417] font-black text-xs uppercase tracking-wider shadow-retro-sm hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer"
             >
               <Wallet className="w-3.5 h-3.5" />
               <span>Connect</span>
@@ -486,7 +516,7 @@ function App() {
           )}
           <div 
             onClick={() => setActiveTab('terminal')}
-            className="bg-[#121417] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border-2 border-transparent hover:border-[#FBD023] transition-colors shadow-retro-sm cursor-pointer"
+            className="bg-[#121417] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-[#121417] hover:bg-[#272b31] transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#FBD023]" />
             <span className="font-black text-xs">{totalEarned} NIM</span>
@@ -494,21 +524,19 @@ function App() {
           {isCreator && (
             <button 
               data-open-creator
-              onClick={handleOpenCreator}
-              className="w-8 h-8 rounded-full bg-white border-2 border-[#121417] flex items-center justify-center hover:bg-neutral-100 shadow-retro-sm transition-all"
+              onClick={() => setIsCreatorMenuOpen(true)}
+              className="focus-ring w-8 h-8 rounded-full bg-white border border-[#121417]/20 flex items-center justify-center hover:bg-neutral-100 transition-all"
+              title="Open creator menu"
             >
-              <div className="w-1 h-1 rounded-full bg-[#121417] space-x-1 flex gap-0.5">
-                <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
-                <span className="w-1 h-1 bg-[#121417] rounded-full"></span>
-              </div>
+              <Menu className="w-4 h-4" />
             </button>
           )}
         </div>
-        <nav className="hidden md:flex items-center gap-1 ml-6 mr-auto" aria-label="Primary navigation">
-          <button onClick={handleGoHome} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'stage' && !currentEvent ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Home</button>
-          <button onClick={() => setActiveTab('terminal')} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'terminal' ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Rewards</button>
-          <button onClick={() => setActiveTab('settings')} className={`px-3 py-2 rounded-xl text-xs font-black uppercase ${activeTab === 'settings' ? 'bg-[#FBD023]' : 'hover:bg-[#F4F4F6]'}`}>Wallet</button>
-          <button onClick={handleOpenCreator} className="px-3 py-2 rounded-xl bg-[#FF532F] text-white text-xs font-black uppercase hover:bg-[#e64522]">Create</button>
+        <nav className="hidden md:flex items-center gap-1 order-2" aria-label="Primary navigation">
+          <button onClick={handleGoHome} className={`focus-ring px-3 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'stage' && !currentEvent ? 'bg-[#121417] text-white' : 'hover:bg-white'}`}>Home</button>
+          <button onClick={() => setActiveTab('terminal')} className={`focus-ring px-3 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'terminal' ? 'bg-[#121417] text-white' : 'hover:bg-white'}`}>Rewards</button>
+          <button onClick={() => setActiveTab('settings')} className={`focus-ring px-3 py-2 rounded-lg text-xs font-black uppercase transition-colors ${activeTab === 'settings' ? 'bg-[#121417] text-white' : 'hover:bg-white'}`}>Wallet</button>
+          <button onClick={handleOpenCreator} className="focus-ring ml-1 px-3 py-2 rounded-lg bg-[#FF532F] text-white text-xs font-black uppercase hover:bg-[#e64522] transition-colors">Create</button>
         </nav>
       </header>
 
@@ -524,17 +552,6 @@ function App() {
           >
             <Sparkles className={`w-5 h-5 ${activeTab === 'stage' ? 'text-[#FF532F]' : ''}`} />
             <span className="text-[9px] font-black uppercase tracking-widest">Home</span>
-          </button>
-
-          {/* Create */}
-          <button
-            onClick={handleOpenCreator}
-            className="flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-all text-[#121417]/40 relative"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-[#121417] flex items-center justify-center shadow-retro-sm -mt-6 border-2 border-white">
-              <Mic2 className="w-5 h-5 text-[#FBD023]" />
-            </div>
-            <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Create</span>
           </button>
 
           {/* Rewards */}
@@ -568,8 +585,26 @@ function App() {
         </div>
       </div>
 
+      {isCreatorMenuOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true" aria-label="Creator menu">
+          <button className="absolute inset-0 bg-[#121417]/35" onClick={() => setIsCreatorMenuOpen(false)} aria-label="Close creator menu" />
+          <aside className="shape-surface-white absolute right-0 top-0 h-full w-[min(86vw,340px)] bg-white p-5 shadow-[-8px_0_24px_rgba(18,20,23,0.2)]">
+            <div className="flex items-center justify-between border-b border-neutral-200 pb-4">
+              <div><p className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Creator workspace</p><h2 className="font-display text-xl font-black">Creator Hub</h2></div>
+              <button onClick={() => setIsCreatorMenuOpen(false)} className="rounded-xl bg-neutral-100 p-2" aria-label="Close creator menu"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mt-5 space-y-2">
+              <button onClick={handleOpenCreator} className="w-full rounded-xl bg-[#FF532F] px-4 py-3 text-left text-xs font-black uppercase text-white">Manage events & payouts</button>
+              <button onClick={() => { setActiveTab('stage'); setIsCreatorMenuOpen(false) }} className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold hover:bg-neutral-100">Home</button>
+              <button onClick={() => { setActiveTab('terminal'); setIsCreatorMenuOpen(false) }} className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold hover:bg-neutral-100">Rewards</button>
+              <button onClick={() => { setActiveTab('settings'); setIsCreatorMenuOpen(false) }} className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold hover:bg-neutral-100">Wallet & Settings</button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* MAIN CONTENT */}
-      <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8">
+      <main className="shape-field max-w-[1280px] mx-auto p-4 sm:p-6 lg:p-8">
         
         {!currentEvent && activeTab === 'stage' && <CollapsiblePlatformHero />}
         <button data-open-creator className="hidden" onClick={handleOpenCreator} />
@@ -620,6 +655,8 @@ function App() {
               onConnect={handleConnectWallet}
               onDisconnect={handleDisconnectWallet}
               onShowGuide={() => setIsGuideOpen(true)}
+                onOpenCreatorMenu={handleOpenCreator}
+                onResetPreferences={() => { localStorage.removeItem('eventquest_creator_name'); localStorage.removeItem('eventquest_starred_events'); localStorage.removeItem('eventquest_guide_seen'); setCreatorName(''); setStarredEventIds([]); setIsGuideOpen(true) }}
               creatorName={creatorName}
               onCreatorNameChange={(name) => { setCreatorName(name); localStorage.setItem('eventquest_creator_name', name) }}
             />
@@ -638,6 +675,8 @@ function App() {
                 onConnect={handleConnectWallet}
                 onDisconnect={handleDisconnectWallet}
                 onShowGuide={() => setIsGuideOpen(true)}
+                onOpenCreatorMenu={handleOpenCreator}
+                onResetPreferences={() => { localStorage.removeItem('eventquest_creator_name'); localStorage.removeItem('eventquest_starred_events'); localStorage.removeItem('eventquest_guide_seen'); setCreatorName(''); setStarredEventIds([]); setIsGuideOpen(true) }}
                 creatorName={creatorName}
                 onCreatorNameChange={(name) => { setCreatorName(name); localStorage.setItem('eventquest_creator_name', name) }}
               />

@@ -5,7 +5,7 @@ import {
 import type { StageEvent, SessionTask, PayoutRecord, GiveawayEntry } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
-import { updateClaimTxHash, getPendingPayouts, getPayouts, getGiveawayEntries, updatePayout } from '../lib/db'
+import { updateClaimTxHash, getPendingPayouts, getPayouts, getGiveawayEntries, updatePayout, createGiveawayPayouts } from '../lib/db'
 import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
 
 interface CreatorUtilityModalProps {
@@ -39,6 +39,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const [draftPool, setDraftPool] = useState('')
   const [draftMode, setDraftMode] = useState<'quiz' | 'giveaway'>('quiz')
   const [draftGiveawayLimit, setDraftGiveawayLimit] = useState('')
+  const [draftGiveawayReward, setDraftGiveawayReward] = useState('')
   const [draftTasks, setDraftTasks] = useState<SessionTask[]>([])
 
   const [taskTitle, setTaskTitle] = useState('')
@@ -292,16 +293,20 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       title: draftTitle.trim(),
       description: draftDesc.trim(),
       organizer: (draftOrg.trim() || defaultCreatorName.trim()),
-      totalPoolNIM: Number(draftPool) || 0,
+      totalPoolNIM: draftMode === 'giveaway'
+        ? (Number(draftGiveawayReward) || 0) * (Number(draftGiveawayLimit) || 0)
+        : Number(draftPool) || 0,
       tasks: draftTasks,
       mode: draftMode,
       giveawayLimit: draftMode === 'giveaway' && draftGiveawayLimit ? Number(draftGiveawayLimit) : undefined,
+      giveawayRewardNIM: draftMode === 'giveaway' ? Number(draftGiveawayReward) : undefined,
+      giveawayClosed: false,
       published: true,
       creatorAddress: connectedAddress
     }
     
     onCreateEvent(newEvent)
-    setDraftTitle(''); setDraftDesc(''); setDraftOrg(''); setDraftPool(''); setDraftTasks([]); setDraftMode('quiz'); setDraftGiveawayLimit('')
+    setDraftTitle(''); setDraftDesc(''); setDraftOrg(''); setDraftPool(''); setDraftTasks([]); setDraftMode('quiz'); setDraftGiveawayLimit(''); setDraftGiveawayReward('')
     setStep(1)
     onSelectEvent(newEvent)
     setViewMode('manage')
@@ -310,20 +315,24 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const handleAirdrop = async () => {
     if (!activeEvent) return
     setIsAirdropping(true)
-    setAirdropMsg('Fetching pending winners...')
+    setAirdropMsg('Fetching pending payouts...')
 
     try {
       const pendingPayouts = await getPendingPayouts(activeEvent.id)
       const eligiblePayouts = pendingPayouts.filter(p => p.recipientAddress !== 'unlinked')
 
       if (eligiblePayouts.length === 0) {
-        setAirdropMsg('No pending winners found!')
+        setAirdropMsg('No pending payouts found!')
         setTimeout(() => setAirdropMsg(''), 3000)
         setIsAirdropping(false)
         return
       }
 
-      setAirdropMsg(`Requesting approval for ${eligiblePayouts.length} winner payout${eligiblePayouts.length === 1 ? '' : 's'}...`)
+      setAirdropMsg(
+        eligiblePayouts.length === 1
+          ? 'Requesting approval for 1 payout...'
+          : `Requesting approval for ${eligiblePayouts.length} payouts one at a time...`
+      )
       const provider = await initNimiqProvider()
       if (!provider) {
         throw new Error('Open EventQuest in Nimiq Pay to approve payout transactions.')
@@ -336,10 +345,10 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
           const tx = await claimNimiqReward(provider, payout.recipientAddress, payout.amountLuna / 100000)
           if (tx) {
             await updatePayout(payout.id, 'submitted', { txHash: tx })
-            await updateClaimTxHash(payout.claimId, tx)
+            if (!payout.claimId.startsWith('giveaway:')) await updateClaimTxHash(payout.claimId, tx)
             successCount++
           } else {
-            await updatePayout(payout.id, 'failed', { failureMessage: 'No transaction hash returned.' })
+            await updatePayout(payout.id, 'failed', { failureMessage: 'No transaction identifier returned.' })
             failureCount++
           }
         } catch (e) {
@@ -363,6 +372,17 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
     }
 
     setIsAirdropping(false)
+  }
+
+  const handleCreateGiveawayPayouts = async () => {
+    if (!activeEvent || activeEvent.mode !== 'giveaway' || !activeEvent.giveawayClosed) return
+    const reward = activeEvent.giveawayRewardNIM || 0
+    setAirdropMsg('Creating payout records...')
+    const created = await createGiveawayPayouts(activeEvent.id, reward, giveawayEntries)
+    const refreshed = await getPayouts(activeEvent.id)
+    setPayouts(refreshed)
+    setAirdropMsg(created ? `${created} new payout record${created === 1 ? '' : 's'} created.` : 'No new eligible entries to pay.')
+    setTimeout(() => setAirdropMsg(''), 4000)
   }
 
   const inputCls = 'w-full text-xs font-bold p-2.5 rounded-xl border-2 border-[#121417] bg-[#F4F4F6]'
@@ -579,17 +599,16 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
               <div className="space-y-3 animate-in fade-in">
                 <h3 className="font-display font-black text-base border-b pb-2">1. Event Details</h3>
                 <div><label className={labelCls}>Event Name:</label><input type="text" value={draftTitle} onChange={e => setDraftTitle(e.target.value)} className={inputCls} /></div>
-                <div><label className={labelCls}>Creator name:</label><input type="text" value={draftOrg} onChange={e => setDraftOrg(e.target.value)} className={softInputCls} /></div>
                 <div><label className={labelCls}>Description:</label><textarea rows={2} value={draftDesc} onChange={e => setDraftDesc(e.target.value)} className={`${softInputCls} resize-none`} /></div>
                 <div className="p-3 bg-[#F4F4F6] rounded-xl space-y-2">
-                  <label className="text-[11px] font-black uppercase">Format</label>
+                  <label className="text-[11px] font-black uppercase">Event type</label>
                   <select value={draftMode} onChange={e => setDraftMode(e.target.value as 'quiz' | 'giveaway')} className={softInputCls}>
                     <option value="quiz">Quiz race</option>
-                    <option value="giveaway">Wallet giveaway link</option>
+                    <option value="giveaway">Giveaway event (wallet submissions)</option>
                   </select>
-                  {draftMode === 'giveaway' && <><p className="text-[10px] text-[#121417]/60">Attendees open a link, connect their Nimiq wallet, and join. You choose winners from the entry list.</p><input type="number" min="1" placeholder="Optional entry limit" value={draftGiveawayLimit} onChange={e => setDraftGiveawayLimit(e.target.value)} className={softInputCls} /></>}
+                  {draftMode === 'giveaway' && <><p className="text-[10px] text-[#121417]/60">Attendees submit their wallet through the shared link. Set the fixed NIM amount each eligible wallet receives; submissions can be closed later.</p><input type="number" min="0.00001" step="0.00001" placeholder="NIM per wallet" value={draftGiveawayReward} onChange={e => setDraftGiveawayReward(e.target.value)} className={softInputCls} /><input type="number" min="1" placeholder="Optional submission limit" value={draftGiveawayLimit} onChange={e => setDraftGiveawayLimit(e.target.value)} className={softInputCls} /></>}
                 </div>
-                {draftMode === 'giveaway' ? <button onClick={handlePublish} disabled={!draftTitle.trim() || !draftPool} className="w-full py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Publish Giveaway Link</button> : <button onClick={() => draftTitle.trim() && setStep(2)} disabled={!draftTitle.trim()} className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Next: Set Prize Pool</button>}
+                {draftMode === 'giveaway' ? <button onClick={handlePublish} disabled={!draftTitle.trim() || !(Number(draftGiveawayReward) > 0)} className="w-full py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Create giveaway event</button> : <button onClick={() => draftTitle.trim() && setStep(2)} disabled={!draftTitle.trim()} className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Next: Set Prize Pool</button>}
               </div>
             )}
 
@@ -815,7 +834,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                         </div>
                         <div className="shrink-0 text-right">
                           <p className="text-xs font-black">{payout.amountLuna / 100000} NIM</p>
-                          <p className={`text-[9px] font-black uppercase ${payout.status === 'failed' ? 'text-red-600' : payout.status === 'pending' ? 'text-amber-600' : 'text-emerald-600'}`}>{payout.status === 'submitted' ? 'submitted / verify' : payout.status}</p>
+                          <p className={`text-[9px] font-black uppercase ${payout.status === 'failed' ? 'text-red-600' : payout.status === 'pending' ? 'text-amber-600' : 'text-emerald-600'}`}>{payout.status === 'submitted' ? 'submitted / unverified' : payout.status}</p>
                         </div>
                       </div>
                     })}
@@ -823,9 +842,11 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                 </div>
 
                 {activeEvent.mode === 'giveaway' && <div className="p-4 bg-white border-2 border-[#121417] rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between"><div><h4 className="font-black text-sm">Giveaway entries</h4><p className="text-[10px] font-bold text-[#121417]/60">Wallets collected from the giveaway link.</p></div><span className="text-xs font-black">{giveawayEntries.length}</span></div>
-                  {giveawayEntries.length === 0 ? <p className="text-xs font-bold text-[#121417]/60">No wallets have joined yet.</p> : <div className="space-y-1 max-h-40 overflow-y-auto">{giveawayEntries.map(entry => <div key={entry.id} className="flex justify-between p-2 rounded-lg bg-[#F4F4F6] text-[10px] font-bold"><span>{entry.walletAddress.slice(0, 8)}...{entry.walletAddress.slice(-6)}</span><span>{new Date(entry.joinedAt).toLocaleString()}</span></div>)}</div>}
+                  <div className="flex items-center justify-between gap-2"><div><h4 className="font-black text-sm">Wallet submissions</h4><p className="text-[10px] font-bold text-[#121417]/60">{activeEvent.giveawayRewardNIM} NIM per eligible wallet · {activeEvent.giveawayClosed ? 'Closed' : 'Open'}</p></div><div className="flex items-center gap-2"><span className="text-xs font-black">{giveawayEntries.length}</span>{!activeEvent.giveawayClosed && <button onClick={() => onUpdateEvent({ ...activeEvent, giveawayClosed: true })} className="px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-[10px] font-black uppercase">Close</button>}</div></div>
+                  {giveawayEntries.length === 0 ? <p className="text-xs font-bold text-[#121417]/60">No wallet submissions yet.</p> : <div className="space-y-1 max-h-40 overflow-y-auto">{giveawayEntries.map(entry => <div key={entry.id} className="flex justify-between p-2 rounded-lg bg-[#F4F4F6] text-[10px] font-bold"><span>{entry.walletAddress.slice(0, 8)}...{entry.walletAddress.slice(-6)}</span><span>{new Date(entry.joinedAt).toLocaleString()}</span></div>)}</div>}
                 </div>}
+
+                {activeEvent.mode === 'giveaway' && activeEvent.giveawayClosed && <button onClick={handleCreateGiveawayPayouts} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase">Create payouts for all eligible wallets</button>}
 
                 {/* Batch Airdrop */}
                 <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl space-y-3">
@@ -836,8 +857,8 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-black text-sm text-purple-950">Approve NIM payouts</h4>
-                      <p className="text-[10px] font-bold text-purple-700">Send queued rewards from your creator wallet. Approve each transaction in Nimiq Pay. A returned ID is marked submitted until confirmed on-chain.</p>
+                      <h4 className="font-black text-sm text-purple-950">Send payout queue</h4>
+                      <p className="text-[10px] font-bold text-purple-700">Starts the pending queue, but Nimiq Pay receives one transaction request per wallet. Returned identifiers are marked submitted, not blockchain-confirmed.</p>
                     </div>
                   </div>
                   <button 
@@ -845,7 +866,7 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                     disabled={isAirdropping}
                     className="w-full py-3 rounded-xl bg-purple-600 text-white font-black text-xs uppercase hover:bg-purple-700 disabled:opacity-50 transition-all shadow-retro-sm"
                   >
-                    {isAirdropping ? 'Waiting for wallet approval...' : 'Approve NIM payouts'}
+                    {isAirdropping ? 'Processing payout queue...' : 'Send payout queue'}
                   </button>
                   {airdropMsg && <p className="text-xs font-bold text-purple-800 text-center">{airdropMsg}</p>}
                 </div>

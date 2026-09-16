@@ -255,15 +255,15 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
     return (
       <div className="bg-white border-3 border-[#121417] rounded-[32px] p-6 shadow-retro space-y-5">
         <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Wallet giveaway</span>
-          <h2 className="font-display font-black text-2xl">Join the giveaway</h2>
-          <p className="text-sm text-[#121417]/65">Connect your Nimiq wallet to enter. The host will select winners and approve NIM payouts.</p>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#FF532F]">Giveaway event</span>
+          <h2 className="font-display font-black text-2xl">Submit your wallet</h2>
+          <p className="text-sm text-[#121417]/65">Connect your Nimiq wallet to submit an entry. There are no quiz questions or winner selection.</p>
         </div>
         <div className="p-4 bg-[#F4F4F6] rounded-2xl border border-neutral-200 text-xs font-bold">
-          {event.giveawayLimit ? `Up to ${event.giveawayLimit} entries will be accepted.` : 'Entries are open while the giveaway is live.'}
+          {event.giveawayClosed ? 'Wallet submissions are closed.' : event.giveawayLimit ? `Up to ${event.giveawayLimit} wallet submissions will be accepted.` : 'Wallet submissions are open while this event is live.'}
         </div>
-        <button disabled={giveawayJoined || !onJoinGiveaway} onClick={() => { void onJoinGiveaway?.() }} className="w-full py-3.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-60">
-          {giveawayJoined ? 'Wallet entered' : onJoinGiveaway ? 'Enter giveaway' : 'Connect wallet to enter'}
+        <button disabled={giveawayJoined || !onJoinGiveaway || event.giveawayClosed} onClick={() => { void onJoinGiveaway?.() }} className="w-full py-3.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-60">
+          {event.giveawayClosed ? 'Submissions closed' : giveawayJoined ? 'Wallet submitted' : onJoinGiveaway ? 'Submit wallet' : 'Connect wallet to submit'}
         </button>
       </div>
     )

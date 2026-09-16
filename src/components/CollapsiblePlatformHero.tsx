@@ -1,210 +1,96 @@
-import React, { useState } from 'react'
-import {
-  ChevronUp,
-  ChevronDown,
-  Zap,
-  Mic2,
-  ShieldCheck,
-  Coins,
-  Radio,
-  Sparkles,
-  Layers,
-  Smartphone,
-  CheckCircle2,
-} from 'lucide-react'
+import React from 'react'
+import { ArrowDown, ArrowRight, CheckCircle2, Coins, Gift, Gamepad2, QrCode, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 
-interface HeroProps {
-  // onHostClick is not needed here anymore, but keeping interface for future expansion if needed, or remove completely
-}
+interface HeroProps {}
 
 export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 pt-2 pb-4">
-      {isCollapsed ? (
-        /* COLLAPSED STATE (Compact 1-line bar) */
-        <div className="bg-white border-2 border-[#121417] rounded-2xl p-3 px-5 shadow-retro-sm flex items-center justify-between transition-all">
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF532F] animate-pulse" />
-            <span className="font-display font-black text-xs sm:text-sm text-[#121417]">
-              EVENTQUEST: Live tasks and instant rewards
-            </span>
-            <span className="hidden md:inline text-[11px] font-bold text-[#121417]/60">
-              • Join a stage, complete a task, earn NIM
-            </span>
+    <section className="w-full max-w-7xl mx-auto pt-2 pb-8 scroll-mt-24" aria-labelledby="landing-title">
+      <div className="shape-surface-yellow grid overflow-hidden rounded-[2rem] bg-[#FBD023] shadow-retro-lg lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative p-6 sm:p-10 lg:p-14">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden text-[#121417]/[0.1]">
+            <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full border-[18px]" />
+            <div className="absolute right-24 top-20 h-14 w-14 rotate-12 rounded-xl border-4" />
+            <div className="absolute bottom-8 right-12 h-3 w-3 rounded-full bg-[#FF532F]" />
+            <div className="absolute bottom-12 left-1/2 h-12 w-12 rotate-45 border-4" />
+            <Gamepad2 className="absolute -bottom-8 right-36 h-32 w-32 -rotate-12 stroke-[1.2]" />
+            <div className="absolute right-10 top-44 h-8 w-8 rotate-45 border-4" />
           </div>
-
-          <button
-            onClick={() => setIsCollapsed(false)}
-            className="flex items-center gap-1.5 text-xs font-bold text-[#121417] hover:text-[#FF532F] bg-neutral-100 hover:bg-neutral-200 px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
-          >
-            <span>How rewards work</span>
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ) : (
-        /* EXPANDED STATE (Doubled length, rich layout explaining StageDrop) */
-        <div className="bg-[#FBD023] border-3 border-[#121417] rounded-[32px] p-6 sm:p-8 shadow-retro relative overflow-hidden transition-all">
-          {/* Subtle decorative background watermark */}
-          <div className="absolute -right-8 -bottom-10 pointer-events-none opacity-5 select-none font-display font-black text-9xl tracking-tighter text-[#121417]">
-            STAGE
-          </div>
-
-          {/* Top Bar inside Hero */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#121417]/15 pb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-white bg-[#121417] px-3 py-1 rounded-full flex items-center gap-1.5 shadow-xs">
-                <Mic2 className="w-3 h-3 text-[#FBD023]" />
-                <span>EventQuest live stages</span>
-              </span>
-              <span className="text-xs font-bold text-[#121417]/80 hidden sm:inline">
-                Join live tasks and claim your reward in Nimiq Pay
-              </span>
+          <div className="relative max-w-2xl">
+            <div className="mb-6 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#121417]/70">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#FF532F] shadow-[0_0_0_4px_rgba(255,83,47,0.16)]" />
+              Live stages on Nimiq Pay
             </div>
-
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="flex items-center gap-1.5 text-xs font-black text-[#121417] bg-white/70 hover:bg-white px-3.5 py-1.5 rounded-full border border-[#121417]/20 transition-all cursor-pointer shadow-xs"
-              title="Collapse Platform Overview"
-            >
-              <span>Hide details</span>
-              <ChevronUp className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Main Headline & Description */}
-          <div className="pt-6 pb-6 max-w-4xl">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 border border-black/10 text-[11px] font-black uppercase tracking-wider text-[#FF532F] mb-3">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Real-Time Stage Interactivity</span>
-              </div>
-
-              <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-[#121417] tracking-tight leading-[1.1]">
-                Join the live stage and{' '}
-                <span className="text-[#FF532F] underline decoration-4 decoration-[#121417]">
-                  earn your reward
-                </span>
-              </h1>
-
-              <p className="text-sm sm:text-base text-[#121417]/85 font-medium leading-relaxed mt-3 max-w-3xl">
-                Scan the event QR code, answer the next task, and see your NIM reward immediately. No separate app download is needed.
-              </p>
-
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <a
-                  href="#stage-portal"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#121417] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro hover:translate-y-[2px] hover:shadow-retro-sm transition-all"
-                >
-                  <Zap className="w-5 h-5" /> See my starred stages
-                </a>
-                <div className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/80 border-2 border-[#121417] rounded-2xl font-black text-sm uppercase tracking-widest shadow-retro-sm">
-                  <Smartphone className="w-5 h-5" /> Open Nimiq Pay to claim
+            <h1 id="landing-title" className="font-display text-4xl font-black leading-[0.98] tracking-[-0.045em] text-[#121417] sm:text-6xl lg:text-7xl">
+              Turn any moment into a reward.
+            </h1>
+            <p className="mt-6 max-w-xl text-sm font-semibold leading-7 text-[#121417]/75 sm:text-base">
+              Join a live quiz or submit your wallet to a giveaway event. Hosts create the event, share one link, and review every entry in Creator Hub.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a href="#stage-portal" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#121417] px-5 py-3.5 text-sm font-black uppercase tracking-wider text-white shadow-retro transition-transform hover:translate-y-0.5 hover:shadow-retro-sm">
+                Find a stage <ArrowDown className="h-4 w-4 text-[#FBD023]" />
+              </a>
+              <a href="#how-it-works" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#121417]/25 bg-white/60 px-5 py-3.5 text-sm font-black uppercase tracking-wider text-[#121417] transition-colors hover:bg-white">
+                How it works <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="mt-9 grid max-w-xl gap-3 sm:grid-cols-2">
+              <a href="#stage-portal" className="group rounded-2xl border border-[#121417]/20 bg-white/65 p-4 transition-transform hover:-translate-y-0.5 hover:bg-white">
+                <div className="flex items-center justify-between">
+                  <Zap className="h-5 w-5 text-[#FF532F]" />
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3-Step Interactive Lifecycle Flow (Doubles the content & depth) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            {/* Step 1 */}
-            <div className="bg-white border-2 border-[#121417] rounded-2xl p-4.5 shadow-retro-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#FBD023] border border-[#121417] flex items-center justify-center font-black text-sm">
-                    <Layers className="w-4 h-4 text-[#121417]" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-neutral-100 text-[#121417] px-2 py-0.5 rounded-full">
-                    Step 1
-                  </span>
+                <p className="mt-5 text-base font-black">Join a quiz</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-[#121417]/65">Answer live questions and compete for NIM.</p>
+              </a>
+              <a href="#stage-portal" className="group rounded-2xl border border-[#121417]/20 bg-white/65 p-4 transition-transform hover:-translate-y-0.5 hover:bg-white">
+                <div className="flex items-center justify-between">
+                  <Gift className="h-5 w-5 text-[#FF532F]" />
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </div>
-                <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  1. Join the stage
-                </h3>
-                <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  Scan a host QR code or enter an event link to see the live tasks for this stage.
-                </p>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-[#FF532F]">
-                <Coins className="w-3.5 h-3.5" />
-                <span>Find your next task</span>
-              </div>
+                <p className="mt-5 text-base font-black">Enter a giveaway</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-[#121417]/65">Submit your wallet once. No trivia required.</p>
+              </a>
             </div>
-
-            {/* Step 2 */}
-            <div className="bg-white border-2 border-[#121417] rounded-2xl p-4.5 shadow-retro-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#FF532F] border border-[#121417] flex items-center justify-center font-black text-sm text-white">
-                    <Radio className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-orange-100 text-[#FF532F] px-2 py-0.5 rounded-full">
-                    Step 2
-                  </span>
-                </div>
-                <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  2. Complete a task
-                </h3>
-                <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  Answer a quiz or complete the action shown on your phone while there are still spots available.
-                </p>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-[#121417]">
-                <Zap className="w-3.5 h-3.5 text-[#FF532F]" />
-                <span>Live availability</span>
-              </div>
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-[#121417]/70">
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-700" /> Wallet-native</span>
+              <span className="inline-flex items-center gap-1.5"><Coins className="h-4 w-4" /> Host-approved payouts</span>
             </div>
-
-            {/* Step 3 */}
-            <div className="bg-white border-2 border-[#121417] rounded-2xl p-4.5 shadow-retro-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500 border border-[#121417] flex items-center justify-center font-black text-sm text-white">
-                    <ShieldCheck className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                    Step 3
-                  </span>
-                </div>
-                <h3 className="font-display font-black text-base text-[#121417] tracking-tight">
-                  3. Claim your NIM
-                </h3>
-                <p className="text-xs text-[#121417]/75 font-medium mt-1 leading-relaxed">
-                  Connect your Nimiq wallet when you are ready, then claim the reward earned from this stage.
-                </p>
-              </div>
-              <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Clear reward status</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Feature Badges Strip */}
-          <div className="mt-5 pt-4 border-t border-[#121417]/15 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#121417]">
-            <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
-              <Zap className="w-4 h-4 text-[#FF532F]" />
-              <span>Fast confirmation</span>
-            </div>
-
-            <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
-              <ShieldCheck className="w-4 h-4 text-emerald-700" />
-              <span>One reward per device</span>
-            </div>
-
-            <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
-              <Coins className="w-4 h-4 text-[#121417]" />
-              <span>Your wallet, your reward</span>
-            </div>
-
-            <div className="flex items-center gap-2 bg-black/5 px-3 py-1.5 rounded-xl">
-              <Smartphone className="w-4 h-4 text-[#FF532F]" />
-              <span>Works in Nimiq Pay</span>
-            </div>
+            <p className="mt-5 text-xs font-bold text-[#121417]/60">
+              Hosting? Use <strong className="text-[#121417]">Create</strong> above, then choose Quiz or Giveaway event.
+            </p>
           </div>
         </div>
-      )}
-    </div>
+
+        <div id="how-it-works" className="relative flex min-h-[340px] flex-col justify-between bg-[#121417] p-6 text-white sm:p-8 lg:p-10">
+          <div className="absolute right-8 top-8 h-24 w-24 rounded-full bg-[#FF532F]/20 blur-2xl" />
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-white/55">The live loop</span>
+              <Sparkles className="h-5 w-5 text-[#FBD023]" />
+            </div>
+            <div className="mt-8 space-y-5">
+              <div className="flex gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FBD023] text-sm font-black text-[#121417]">1</div>
+                <div><h2 className="font-display text-lg font-black">Scan or open a stage</h2><p className="mt-1 text-xs font-medium leading-5 text-white/60">Save your favourites so they are ready on the home screen.</p></div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FF532F] text-sm font-black text-white">2</div>
+                <div><h2 className="font-display text-lg font-black">Play or submit</h2><p className="mt-1 text-xs font-medium leading-5 text-white/60">Join a quiz to play, or submit your wallet to a giveaway event.</p></div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-sm font-black text-white">3</div>
+                <div><h2 className="font-display text-lg font-black">Receive your NIM</h2><p className="mt-1 text-xs font-medium leading-5 text-white/60">The host approves the payout directly to your connected wallet.</p></div>
+              </div>
+            </div>
+          </div>
+          <div className="relative mt-8 flex items-center justify-between border-t border-white/10 pt-5">
+            <div className="flex items-center gap-2 text-xs font-bold text-white/65"><QrCode className="h-4 w-4 text-[#FBD023]" /> One link, two event types</div>
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }

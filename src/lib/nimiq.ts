@@ -186,10 +186,10 @@ export async function claimNimiqReward(
   if (typeof result !== 'string' || !result) {
     const providerError = result as { error?: { message?: string; type?: string } }
     const message = providerError?.error?.message || providerError?.error?.type
-    throw new Error(message ? `Nimiq Pay rejected the payout: ${message}` : 'Nimiq Pay did not return a transaction hash.')
+    throw new Error(message ? `Nimiq Pay rejected the payout: ${message}` : 'Nimiq Pay did not return a transaction identifier.')
   }
 
-  // Nimiq Pay returns the submitted transaction identifier. Confirmation must be reconciled separately.
+  // The provider result is stored as submitted metadata; blockchain confirmation is separate.
   return result
 }
 
