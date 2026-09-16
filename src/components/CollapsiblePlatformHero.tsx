@@ -1,9 +1,11 @@
 import React from 'react'
-import { ArrowDown, ArrowRight, CheckCircle2, Coins, Gift, Gamepad2, QrCode, ShieldCheck, Sparkles, Zap } from 'lucide-react'
+import { ArrowDown, ArrowRight, CheckCircle2, Coins, Gift, Gamepad2, Plus, QrCode, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 
-interface HeroProps {}
+interface HeroProps {
+  onOpenCreator: () => void
+}
 
-export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
+export const CollapsiblePlatformHero: React.FC<HeroProps> = ({ onOpenCreator }) => {
   return (
     <section className="w-full max-w-7xl mx-auto pt-2 pb-8 scroll-mt-24" aria-labelledby="landing-title">
       <div className="shape-surface-yellow grid overflow-hidden rounded-[2rem] bg-[#FBD023] shadow-retro-lg lg:grid-cols-[1.15fr_0.85fr]">
@@ -60,6 +62,16 @@ export const CollapsiblePlatformHero: React.FC<HeroProps> = () => {
             <p className="mt-5 text-xs font-bold text-[#121417]/60">
               Hosting? Use <strong className="text-[#121417]">Create</strong> above, then choose Quiz or Giveaway event.
             </p>
+            <button
+              type="button"
+              onClick={onOpenCreator}
+              className="mt-6 inline-flex items-center gap-2 rounded-full border-2 border-[#121417] bg-[#FF532F] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-retro-sm transition-transform hover:-translate-y-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#121417] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBD023]"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#FF532F]">
+                <Plus className="h-4 w-4 stroke-[3]" />
+              </span>
+              Open Creator Hub
+            </button>
           </div>
         </div>
 

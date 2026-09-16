@@ -606,7 +606,7 @@ function App() {
       {/* MAIN CONTENT */}
       <main className="shape-field max-w-[1280px] mx-auto p-4 sm:p-6 lg:p-8">
         
-        {!currentEvent && activeTab === 'stage' && <CollapsiblePlatformHero />}
+        {!currentEvent && activeTab === 'stage' && <CollapsiblePlatformHero onOpenCreator={handleOpenCreator} />}
         <button data-open-creator className="hidden" onClick={handleOpenCreator} />
 
         {/* MOBILE VIEW (always switches based on activeTab) */}
