@@ -307,6 +307,16 @@ function App() {
   const handleTaskComplete = async (taskId: string, _optIdx: number) => {
     if (!currentEvent) return
 
+    // Block creators from winning their own events
+    if (
+      currentEvent.creatorAddress &&
+      nimiqAddress &&
+      currentEvent.creatorAddress.replace(/\s+/g, '').toLowerCase() === nimiqAddress.replace(/\s+/g, '').toLowerCase()
+    ) {
+      alert('Creators cannot win rewards from their own events.')
+      return
+    }
+
     const task = currentEvent.tasks.find((x) => x.id === taskId)
     if (!task) return
 
@@ -365,6 +375,16 @@ function App() {
       setIsWalletModalOpen(true)
       return false
     }
+
+    // Block creators from entering their own giveaways
+    if (
+      currentEvent.creatorAddress &&
+      currentEvent.creatorAddress.replace(/\s+/g, '').toLowerCase() === nimiqAddress.replace(/\s+/g, '').toLowerCase()
+    ) {
+      alert('Creators cannot enter their own giveaways.')
+      return false
+    }
+
     if (currentEvent.giveawayLimit !== undefined &&
       (await getGiveawayEntries(currentEvent.id)).length >= currentEvent.giveawayLimit) return false
     const entry: GiveawayEntry = {

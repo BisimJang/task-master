@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
-  X, Zap, FolderPlus, Trash2, CheckCircle2, Copy, Plus, Info, Upload
+  X, Zap, FolderPlus, Trash2, CheckCircle2, Copy, Plus, Info, Upload, AlertCircle, Wallet
 } from 'lucide-react'
 import type { StageEvent, SessionTask, PayoutRecord, GiveawayEntry } from '../lib/types'
 // @ts-ignore
 import { QRCodeSVG } from 'qrcode.react'
 import { updateClaimTxHash, getPendingPayouts, getPayouts, getGiveawayEntries, updatePayout, createGiveawayPayouts } from '../lib/db'
 import { claimNimiqReward, initNimiqProvider } from '../lib/nimiq'
+import { queryOnChainBalance } from '../lib/nimiq-gift-vault'
 
 interface CreatorUtilityModalProps {
   isOpen: boolean
@@ -75,6 +76,10 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const [payoutsError, setPayoutsError] = useState('')
   const [giveawayEntries, setGiveawayEntries] = useState<GiveawayEntry[]>([])
 
+  const [creatorBalance, setCreatorBalance] = useState<number | null>(null)
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false)
+  const [budgetError, setBudgetError] = useState<string | null>(null)
+
   useEffect(() => {
     if (!isOpen) return
     if (activeEvent) {
@@ -84,6 +89,26 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       setStep(1)
     }
   }, [isOpen, activeEvent, _events])
+
+  useEffect(() => {
+    if (!isOpen || !connectedAddress) {
+      setCreatorBalance(null)
+      return
+    }
+    let cancelled = false
+    setIsCheckingBalance(true)
+    queryOnChainBalance(connectedAddress)
+      .then((res) => {
+        if (!cancelled) setCreatorBalance(res.balanceNIM)
+      })
+      .catch(() => {
+        if (!cancelled) setCreatorBalance(null)
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingBalance(false)
+      })
+    return () => { cancelled = true }
+  }, [isOpen, connectedAddress])
 
   useEffect(() => {
     if (!isOpen || manageTab !== 'payouts' || !activeEvent) return
@@ -108,6 +133,29 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
   const currentTasks = viewMode === 'manage' && activeEvent ? activeEvent.tasks : draftTasks
   const usedPool = getUsedPool(currentTasks)
   const remainingPool = currentPool - usedPool
+
+  const getDraftRequiredPool = () => {
+    if (draftMode === 'giveaway') {
+      const reward = Number(draftGiveawayReward) || 0
+      const limit = Number(draftGiveawayLimit) || 0
+      return limit > 0 ? reward * limit : reward
+    }
+    return Number(draftPool) || 0
+  }
+
+  const validatePoolBudget = (): { valid: boolean; message: string } => {
+    const required = getDraftRequiredPool()
+    if (required <= 0) {
+      return { valid: false, message: 'Event prize budget must be greater than 0 NIM.' }
+    }
+    if (creatorBalance !== null && required > creatorBalance) {
+      return {
+        valid: false,
+        message: `Insufficient NIM balance: This event requires ${required} NIM, but your wallet (${connectedAddress?.slice(0, 10)}...) only holds ${creatorBalance.toLocaleString()} NIM.`,
+      }
+    }
+    return { valid: true, message: '' }
+  }
 
   const handleCopy = (link: string) => {
     navigator.clipboard.writeText(link)
@@ -286,6 +334,15 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
       return
     }
     if (!draftTitle.trim()) return
+
+    const budgetCheck = validatePoolBudget()
+    if (!budgetCheck.valid) {
+      alert(budgetCheck.message)
+      setBudgetError(budgetCheck.message)
+      return
+    }
+    setBudgetError(null)
+
     const slug = draftTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     const newEvent: StageEvent = {
       id: 'evt-' + Date.now(),
@@ -597,34 +654,127 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
 
             {step === 1 && (
               <div className="space-y-3 animate-in fade-in">
-                <h3 className="font-display font-black text-base border-b pb-2">1. Event Details</h3>
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="font-display font-black text-base">1. Event Details</h3>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#121417]/70 bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">
+                    <Wallet className="w-3 h-3 text-[#121417]" />
+                    <span>Wallet: {isCheckingBalance ? 'Checking...' : creatorBalance !== null ? `${creatorBalance.toLocaleString()} NIM` : 'Not loaded'}</span>
+                  </div>
+                </div>
                 <div><label className={labelCls}>Event Name:</label><input type="text" value={draftTitle} onChange={e => setDraftTitle(e.target.value)} className={inputCls} /></div>
                 <div><label className={labelCls}>Description:</label><textarea rows={2} value={draftDesc} onChange={e => setDraftDesc(e.target.value)} className={`${softInputCls} resize-none`} /></div>
                 <div className="p-3 bg-[#F4F4F6] rounded-xl space-y-2">
                   <label className="text-[11px] font-black uppercase">Event type</label>
-                  <select value={draftMode} onChange={e => setDraftMode(e.target.value as 'quiz' | 'giveaway')} className={softInputCls}>
+                  <select value={draftMode} onChange={e => { setDraftMode(e.target.value as 'quiz' | 'giveaway'); setBudgetError(null) }} className={softInputCls}>
                     <option value="quiz">Quiz race</option>
                     <option value="giveaway">Giveaway event (wallet submissions)</option>
                   </select>
-                  {draftMode === 'giveaway' && <><p className="text-[10px] text-[#121417]/60">Attendees submit their wallet through the shared link. Set the fixed NIM amount each eligible wallet receives; submissions can be closed later.</p><input type="number" min="0.00001" step="0.00001" placeholder="NIM per wallet" value={draftGiveawayReward} onChange={e => setDraftGiveawayReward(e.target.value)} className={softInputCls} /><input type="number" min="1" placeholder="Optional submission limit" value={draftGiveawayLimit} onChange={e => setDraftGiveawayLimit(e.target.value)} className={softInputCls} /></>}
+                  {draftMode === 'giveaway' && (
+                    <>
+                      <p className="text-[10px] text-[#121417]/60">Attendees submit their wallet through the shared link. Set the fixed NIM amount each eligible wallet receives; submissions can be closed later.</p>
+                      <input type="number" min="0.00001" step="0.00001" placeholder="NIM per wallet" value={draftGiveawayReward} onChange={e => { setDraftGiveawayReward(e.target.value); setBudgetError(null) }} className={softInputCls} />
+                      <input type="number" min="1" placeholder="Optional submission limit" value={draftGiveawayLimit} onChange={e => { setDraftGiveawayLimit(e.target.value); setBudgetError(null) }} className={softInputCls} />
+                      {getDraftRequiredPool() > 0 && (
+                        <div className="flex justify-between items-center text-[10px] font-bold text-[#121417]/75 pt-1">
+                          <span>Total Giveaway Budget Required:</span>
+                          <span className="font-mono font-black">{getDraftRequiredPool().toLocaleString()} NIM</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-                {draftMode === 'giveaway' ? <button onClick={handlePublish} disabled={!draftTitle.trim() || !(Number(draftGiveawayReward) > 0)} className="w-full py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Create giveaway event</button> : <button onClick={() => draftTitle.trim() && setStep(2)} disabled={!draftTitle.trim()} className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4">Next: Set Prize Pool</button>}
+
+                {draftMode === 'giveaway' && creatorBalance !== null && getDraftRequiredPool() > creatorBalance && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                    <span>Giveaway budget ({getDraftRequiredPool()} NIM) exceeds your wallet balance ({creatorBalance.toLocaleString()} NIM).</span>
+                  </div>
+                )}
+
+                {budgetError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                    <span>{budgetError}</span>
+                  </div>
+                )}
+
+                {draftMode === 'giveaway' ? (
+                  <button
+                    onClick={handlePublish}
+                    disabled={!draftTitle.trim() || !(Number(draftGiveawayReward) > 0) || (creatorBalance !== null && getDraftRequiredPool() > creatorBalance)}
+                    className="w-full py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase disabled:opacity-50 mt-4 cursor-pointer hover:bg-emerald-700 transition-colors"
+                  >
+                    Create giveaway event
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => draftTitle.trim() && setStep(2)}
+                    disabled={!draftTitle.trim()}
+                    className="w-full py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 mt-4 cursor-pointer hover:bg-black transition-colors"
+                  >
+                    Next: Set Prize Pool
+                  </button>
+                )}
               </div>
             )}
 
             {step === 2 && (
               <div className="space-y-3 animate-in fade-in">
-                <h3 className="font-display font-black text-base border-b pb-2">2. Prize Pool</h3>
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="font-display font-black text-base">2. Prize Pool</h3>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#121417]/70 bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">
+                    <Wallet className="w-3 h-3 text-[#121417]" />
+                    <span>Wallet: {isCheckingBalance ? 'Checking...' : creatorBalance !== null ? `${creatorBalance.toLocaleString()} NIM` : 'Not loaded'}</span>
+                  </div>
+                </div>
                 <div className="p-3 bg-amber-50 border-2 border-[#FBD023] rounded-2xl">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Zap className="w-3.5 h-3.5 text-[#121417]/60" />
                     <label className="text-[11px] font-black text-[#121417] uppercase tracking-wider">Total Pool (NIM)</label>
                   </div>
-                  <input type="number" min="0" value={draftPool} onChange={e => setDraftPool(e.target.value)} className="w-full text-sm font-black p-2.5 rounded-xl border-2 border-[#121417] bg-white" />
+                  <input
+                    type="number"
+                    min="0"
+                    value={draftPool}
+                    onChange={e => {
+                      setDraftPool(e.target.value)
+                      setBudgetError(null)
+                    }}
+                    className="w-full text-sm font-black p-2.5 rounded-xl border-2 border-[#121417] bg-white"
+                  />
                 </div>
+
+                {creatorBalance !== null && Number(draftPool) > creatorBalance && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                    <span>Prize pool ({draftPool} NIM) exceeds your current wallet balance ({creatorBalance.toLocaleString()} NIM). Please adjust your pool.</span>
+                  </div>
+                )}
+
+                {budgetError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                    <span>{budgetError}</span>
+                  </div>
+                )}
+
                 <div className="flex gap-2 mt-4">
-                  <button onClick={() => setStep(1)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase">Back</button>
-                  <button onClick={() => draftPool && setStep(3)} disabled={!draftPool} className="flex-1 py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50">Next: Add Tasks</button>
+                  <button onClick={() => setStep(1)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase cursor-pointer hover:bg-neutral-100">Back</button>
+                  <button
+                    onClick={() => {
+                      const check = validatePoolBudget()
+                      if (!check.valid) {
+                        setBudgetError(check.message)
+                        return
+                      }
+                      setBudgetError(null)
+                      setStep(3)
+                    }}
+                    disabled={!draftPool || (creatorBalance !== null && Number(draftPool) > creatorBalance)}
+                    className="flex-1 py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 cursor-pointer hover:bg-black transition-colors"
+                  >
+                    Next: Add Tasks
+                  </button>
                 </div>
               </div>
             )}
@@ -633,14 +783,14 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
               <div className="space-y-4 animate-in fade-in">
                 <div className="flex justify-between items-center border-b pb-2">
                   <h3 className="font-display font-black text-base">3. Add Quizzes ({draftTasks.length} added)</h3>
-                  <button onClick={() => setStep(4)} className="text-xs font-black text-emerald-600 hover:underline">Review & Publish →</button>
+                  <button onClick={() => setStep(4)} className="text-xs font-black text-emerald-600 hover:underline cursor-pointer">Review & Publish →</button>
                 </div>
                 
                 {renderTaskForm()}
 
                 <div className="flex gap-2 mt-4">
-                  <button onClick={() => setStep(2)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase">Back</button>
-                  <button onClick={() => setStep(4)} disabled={draftTasks.length === 0} className="flex-1 py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50">Review & Publish</button>
+                  <button onClick={() => setStep(2)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase cursor-pointer hover:bg-neutral-100">Back</button>
+                  <button onClick={() => setStep(4)} disabled={draftTasks.length === 0} className="flex-1 py-3.5 rounded-full bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-50 cursor-pointer hover:bg-black transition-colors">Review & Publish</button>
                 </div>
               </div>
             )}
@@ -652,10 +802,21 @@ export const CreatorUtilityModal: React.FC<CreatorUtilityModalProps> = ({
                   <p className="text-xs font-bold">Event: {draftTitle}</p>
                   <p className="text-xs font-bold">Pool: {draftPool} NIM</p>
                   <p className="text-xs font-bold">Quizzes: {draftTasks.length}</p>
+                  {creatorBalance !== null && (
+                    <p className="text-xs font-bold text-neutral-600">
+                      Wallet Balance: {creatorBalance.toLocaleString()} NIM
+                    </p>
+                  )}
                 </div>
+                {budgetError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                    <span>{budgetError}</span>
+                  </div>
+                )}
                 <div className="flex gap-2 mt-4">
-                  <button onClick={() => setStep(3)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase">Back</button>
-                  <button onClick={handlePublish} className="flex-1 py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase hover:bg-emerald-700 shadow-retro-sm">Publish Event</button>
+                  <button onClick={() => setStep(3)} className="px-4 py-3.5 rounded-full border-2 border-[#121417] font-black text-xs uppercase cursor-pointer hover:bg-neutral-100">Back</button>
+                  <button onClick={handlePublish} className="flex-1 py-3.5 rounded-full bg-emerald-600 text-white font-black text-xs uppercase hover:bg-emerald-700 shadow-retro-sm cursor-pointer transition-colors">Publish Event</button>
                 </div>
               </div>
             )}

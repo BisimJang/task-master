@@ -262,8 +262,26 @@ export const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({
         <div className="p-4 bg-[#F4F4F6] rounded-2xl border border-neutral-200 text-xs font-bold">
           {event.giveawayClosed ? 'Wallet submissions are closed.' : event.giveawayLimit ? `Up to ${event.giveawayLimit} wallet submissions will be accepted.` : 'Wallet submissions are open while this event is live.'}
         </div>
-        <button disabled={giveawayJoined || !onJoinGiveaway || event.giveawayClosed} onClick={() => { void onJoinGiveaway?.() }} className="w-full py-3.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-60">
-          {event.giveawayClosed ? 'Submissions closed' : giveawayJoined ? 'Wallet submitted' : onJoinGiveaway ? 'Submit wallet' : 'Connect wallet to submit'}
+        <button
+          disabled={isCreator || giveawayJoined || !onJoinGiveaway || event.giveawayClosed}
+          onClick={() => {
+            if (isCreator) {
+              alert('Creators cannot enter their own giveaways.')
+              return
+            }
+            void onJoinGiveaway?.()
+          }}
+          className="w-full py-3.5 rounded-xl bg-[#121417] text-white font-black text-xs uppercase disabled:opacity-60"
+        >
+          {isCreator
+            ? 'Host View (Cannot Enter)'
+            : event.giveawayClosed
+            ? 'Submissions closed'
+            : giveawayJoined
+            ? 'Wallet submitted'
+            : onJoinGiveaway
+            ? 'Submit wallet'
+            : 'Connect wallet to submit'}
         </button>
       </div>
     )
